@@ -717,7 +717,11 @@ body.light #toast { background:#ffffff; border-color:#c0bbb0; color:#2a2a40; }
   <!-- top -->
   <div class="game-top">
     <div class="chapter-tag" id="game-chapter-tag">Ch.01 · p.001</div>
-    <div style="display:flex;gap:8px"><button class="btn-theme" onclick="toggleTheme()">🌙</button><button class="btn-gear" onclick="goTo('screen-settings')">⚙</button></div>
+    <div style="display:flex;gap:8px">
+    <button class="btn-theme" onclick="toggleTheme()">🌙</button>
+    <button class="btn-gear" onclick="goToHome()" title="回首頁">⌂</button>
+    <button class="btn-gear" onclick="goTo('screen-settings')" title="設定">⚙</button>
+  </div>
   </div>
   <!-- stat strip -->
   <div class="stat-strip" id="game-stat-strip"></div>
@@ -1335,8 +1339,29 @@ async function generateStory(g, playerInput){
 
     await persist();
   }catch(e){
-    storyArea.innerHTML=`<div class="story-thinking" style="display:block;color:var(--red)">生成失敗：${esc(e.message||'未知錯誤')}<br><br>請確認 API Key 是否正確。</div>`;
+    const errMsg = e.message||'未知錯誤';
+    const isQuota = errMsg.includes('Quota')||errMsg.includes('429');
+    storyArea.innerHTML=`<div class="story-thinking" style="display:block;color:var(--red)">
+      生成失敗：${esc(errMsg)}<br><br>
+      ${isQuota?'免費額度可能用完，請至設定頁換模型。':'請確認 API Key 是否正確。'}
+    </div>`;
+    // 加重試按鈕
     choicesArea.innerHTML='';
+    const retryBtn = document.createElement('button');
+    retryBtn.className='btn-primary';
+    retryBtn.style.margin='8px 0';
+    retryBtn.textContent='↺ 重新生成';
+    retryBtn.onclick=()=>{
+      const ag=activeGame();
+      if(ag){
+        const lastUser = ag.history.filter(m=>m.role==='user').slice(-1)[0];
+        const lastInput = lastUser?.parts?.[0]?.text || '請繼續故事。';
+        // 移除最後兩條 history（user+model）避免重複
+        if(ag.history.length>=2) ag.history=ag.history.slice(0,-2);
+        generateStory(ag, lastInput);
+      }
+    };
+    choicesArea.appendChild(retryBtn);
   }finally{
     loading.style.display='none';
   }
@@ -1412,7 +1437,7 @@ function parseAndRenderStory(raw, g){
   const ta=document.createElement('textarea'); ta.className='custom-input'; ta.rows=1; ta.placeholder='輸入你的行動或對話……';
   ta.oninput=()=>{ ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; };
   const sendBtn=document.createElement('button'); sendBtn.className='btn-custom-send'; sendBtn.textContent='↑';
-  sendBtn.onclick=()=>{ const v=ta.value.trim(); if(v){ disableChoices(); generateStory(g,v); } };
+  sendBtn.onclick=()=>{ const v=ta.value.trim(); if(v){ const ag=activeGame(); if(ag){ disableChoices(); generateStory(ag,v); } } };
   inputWrap.appendChild(ta); inputWrap.appendChild(sendBtn);
   toggleBtn.onclick=()=>{ toggleBtn.classList.toggle('open'); inputWrap.classList.toggle('open'); if(inputWrap.classList.contains('open')) ta.focus(); };
   choicesArea.appendChild(toggleBtn); choicesArea.appendChild(inputWrap);
@@ -1655,6 +1680,22 @@ function formatTime(s){ const m=Math.floor(s/60); return `${m.toString().padStar
 
 
 /* ════════════════════════════
+   HOME NAVIGATION
+════════════════════════════ */
+function goToHome() {
+  if (!confirm('確定回到首頁？當前遊戲進度已自動儲存。')) return;
+  S.screenStack = ['screen-home'];
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-home').classList.add('active');
+  // 關閉所有 tab
+  ['quest','log','char'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if (el) el.style.display = 'none';
+  });
+  renderHome();
+}
+
+/* ════════════════════════════
    THEME TOGGLE
 ════════════════════════════ */
 function toggleTheme() {
@@ -1711,7 +1752,8 @@ async function runImportAnalysis() {
   btn.disabled = true;
 
   try {
-    const prompt = `你是互動小說存檔分析器。請分析以下對話記錄或摘要，以純 JSON 輸出（不要 markdown、不要說明文字）。
+    const prompt = `你是互動小說存檔分析器。請分析以下對話記錄或摘要。
+重要：你的回覆必須只有一個 JSON 物件，從 { 開始到 } 結束，不要有任何其他文字、說明、或 markdown 格式。
 
 JSON 格式：
 {
@@ -1739,9 +1781,16 @@ ${history.slice(0, 8000)}`;
     const raw = await callGemini(prompt);
     let parsed;
     try {
-      parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      // 更強健的 JSON 提取：找第一個 { 到最後一個 }
+      const rawClean = raw.replace(/```json|```/g, '').trim();
+      const jsonStart = rawClean.indexOf('{');
+      const jsonEnd = rawClean.lastIndexOf('}');
+      if (jsonStart === -1 || jsonEnd === -1) throw new Error('no json');
+      parsed = JSON.parse(rawClean.slice(jsonStart, jsonEnd + 1));
     } catch {
-      throw new Error('AI 回傳格式錯誤，請再試一次');
+      // 如果 JSON 解析失敗，建立空結構讓使用者手動填
+      parsed = { summary: raw.slice(0,300), mainQuests:[], sideQuests:[], characters:[], hooks:'', chapter:1, page:1 };
+      toast('AI 格式不標準，已提取文字供你手動調整');
     }
 
     IMP.summary    = parsed.summary    || '';
