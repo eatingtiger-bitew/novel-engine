@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>故事引擎</title>
+<style>
+:root {
+  --bg:#0a0a0f; --bg-card:#0f0f1a; --bg-input:#0d0d1f; --bg-hover:#14142a;
+  --border:#1e1e30; --border-md:#2a2a40; --border-hi:#5544aa;
+  --text-primary:#e8e4dc; --text-secondary:#c0bcd8; --text-muted:#6a6880; --text-dim:#33334a;
+  --accent:#5544aa; --accent-light:#7766cc;
+  --green:#44aa66; --amber:#cc9944; --red:#cc4455;
+  --mono:'Courier New',Courier,monospace; --serif:Georgia,'Times New Roman',serif;
+  --r:12px; --rs:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family:var(--serif);overflow:hidden;}
+
+/* ── Router ── */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);opacity:0;pointer-events:none;transition:opacity 0.18s;overflow:hidden;}
+.screen.active{opacity:1;pointer-events:all;}
+
+/* ── Shared ── */
+.top-bar{padding:52px 18px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;}
+.top-bar-title{font-size:15px;color:var(--text-primary);letter-spacing:.04em;}
+.btn-back{font-family:var(--mono);font-size:11px;color:var(--accent-light);cursor:pointer;padding:4px 0;background:none;border:none;letter-spacing:.05em;}
+.btn-back:active{opacity:.6;}
+
+.scroll-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 18px 32px;display:flex;flex-direction:column;gap:20px;}
+.section{display:flex;flex-direction:column;gap:10px;}
+.section-header{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.2em;text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.field-label{font-family:var(--mono);font-size:10px;color:#6666aa;letter-spacing:.1em;margin-bottom:5px;}
+.field-hint{font-family:var(--mono);font-size:9px;color:var(--text-dim);line-height:1.55;margin-bottom:6px;}
+
+.input-text{width:100%;background:var(--bg-input);border:1px solid var(--border-md);border-radius:var(--rs);padding:11px 13px;color:var(--text-secondary);font-family:var(--mono);font-size:12px;outline:none;caret-color:var(--accent-light);transition:border-color .15s;-webkit-appearance:none;}
+.input-text:focus{border-color:var(--border-hi);}
+.input-text::placeholder{color:var(--text-dim);}
+
+.input-textarea{width:100%;background:var(--bg-input);border:1px solid var(--border-md);border-radius:var(--rs);padding:11px 13px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;line-height:1.65;outline:none;resize:none;caret-color:var(--accent-light);transition:border-color .15s;-webkit-appearance:none;}
+.input-textarea:focus{border-color:var(--border-hi);}
+.input-textarea::placeholder{color:var(--text-dim);}
+
+.bottom-bar{padding:13px 18px 34px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
+.btn-primary{flex:1;padding:13px;background:#1e1a35;border:1px solid var(--border-hi);border-radius:var(--r);color:#c0b8e8;font-family:var(--serif);font-size:14px;cursor:pointer;text-align:center;transition:background .15s,opacity .15s;-webkit-appearance:none;}
+.btn-primary:active{background:#2a2448;opacity:.9;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.btn-ghost{padding:13px 16px;background:transparent;border:1px solid var(--border-md);border-radius:var(--r);color:var(--text-muted);font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap;transition:border-color .15s,opacity .15s;-webkit-appearance:none;}
+.btn-ghost:active{opacity:.6;}
+
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border-md);border-top-color:var(--accent-light);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(16px);background:#1e1a35;border:1px solid var(--border-hi);border-radius:20px;padding:8px 18px;font-family:var(--mono);font-size:11px;color:#c0b8e8;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:9999;white-space:nowrap;max-width:90vw;text-align:center;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── HOME ── */
+.hero{padding:60px 18px 24px;text-align:center;flex-shrink:0;}
+.hero-eyebrow{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px;}
+.hero-title{font-size:28px;color:var(--text-primary);letter-spacing:.06em;margin-bottom:6px;}
+.hero-sub{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.1em;}
+.home-list-label{padding:0 18px 8px;font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.18em;text-transform:uppercase;flex-shrink:0;}
+.game-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 18px 8px;display:flex;flex-direction:column;gap:8px;}
+.game-card{width:100%;padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .15s,background .15s;text-align:left;-webkit-appearance:none;}
+.game-card:active{background:var(--bg-hover);border-color:var(--border-md);}
+.game-icon{width:46px;height:46px;border-radius:10px;background:#1a1a30;border:1px solid #2a2a45;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.game-info{flex:1;min-width:0;}
+.game-name{font-size:13px;color:var(--text-primary);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.game-meta{font-family:var(--mono);font-size:10px;color:var(--text-muted);}
+.game-arrow{color:var(--border-md);font-size:16px;flex-shrink:0;}
+.home-empty{padding:40px 18px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-dim);line-height:1.8;}
+.home-actions{padding:12px 18px 34px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);flex-shrink:0;}
+.btn-new-game{width:100%;padding:14px;background:#1e1a35;border:1px solid var(--border-hi);border-radius:var(--r);color:#c0b8e8;font-family:var(--serif);font-size:15px;cursor:pointer;text-align:center;transition:background .15s;-webkit-appearance:none;}
+.btn-new-game:active{background:#2a2448;}
+.btn-settings-link{width:100%;padding:11px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--text-muted);font-family:var(--mono);font-size:11px;cursor:pointer;text-align:center;letter-spacing:.08em;transition:border-color .15s;-webkit-appearance:none;}
+.btn-settings-link:active{opacity:.7;}
+
+/* ── SETTINGS ── */
+.api-row{display:flex;gap:8px;align-items:center;}
+.api-input{flex:1;background:var(--bg-input);border:1px solid var(--border-md);border-radius:var(--rs);padding:10px 12px;color:#5566aa;font-family:var(--mono);font-size:11px;outline:none;-webkit-appearance:none;transition:border-color .15s;}
+.api-input:focus{border-color:var(--border-hi);}
+.api-badge{font-family:var(--mono);font-size:9px;padding:5px 10px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.badge-ok{background:#0e1a14;color:var(--green);border:1px solid #225533;}
+.badge-none{background:#1a1a0e;color:var(--amber);border:1px solid #333322;}
+.model-grid{display:flex;gap:7px;}
+.model-chip{flex:1;padding:9px 6px;border-radius:var(--rs);background:var(--bg-card);border:1px solid var(--border-md);font-family:var(--mono);font-size:9px;color:var(--text-muted);text-align:center;cursor:pointer;line-height:1.6;transition:background .15s,border-color .15s,color .15s;-webkit-appearance:none;}
+.model-chip.active{background:#1a1a30;border-color:var(--border-hi);color:#9988cc;}
+.model-chip:active{opacity:.7;}
+.prompt-block{background:#080810;border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;}
+.prompt-preview{padding:10px 12px;font-family:var(--mono);font-size:10px;color:#44445a;line-height:1.7;}
+.prompt-footer{border-top:1px solid var(--border);padding:7px 12px;display:flex;justify-content:flex-end;}
+.btn-edit-prompt{font-family:var(--mono);font-size:10px;color:var(--accent-light);cursor:pointer;background:none;border:none;letter-spacing:.05em;padding:2px 0;}
+.btn-edit-prompt:active{opacity:.6;}
+.interval-row{display:flex;align-items:center;gap:10px;}
+.input-number{width:64px;background:var(--bg-input);border:1px solid var(--border-md);border-radius:var(--rs);padding:10px 12px;color:var(--text-secondary);font-family:var(--mono);font-size:16px;text-align:center;outline:none;-webkit-appearance:none;transition:border-color .15s;}
+.input-number:focus{border-color:var(--border-hi);}
+.interval-unit{font-family:var(--mono);font-size:11px;color:var(--text-muted);}
+.btn-danger{width:100%;padding:12px 14px;background:#1a0e0e;border:1px solid #442222;border-radius:var(--rs);color:#884444;font-family:var(--mono);font-size:11px;cursor:pointer;text-align:left;letter-spacing:.05em;transition:background .15s;-webkit-appearance:none;}
+.btn-danger:active{background:#220e0e;}
+.version-note{text-align:center;font-family:var(--mono);font-size:9px;color:#1e1e2e;letter-spacing:.12em;padding:4px 0 8px;}
+
+/* ── STEP BAR ── */
+.step-bar{padding:12px 18px;display:flex;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;}
+.step-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;flex-shrink:0;transition:background .2s,border-color .2s;}
+.step-dot.done{background:#1e1a35;border:1px solid var(--border-hi);color:#9988cc;}
+.step-dot.current{background:var(--accent);border:1px solid var(--accent-light);color:#fff;}
+.step-dot.pending{background:var(--bg-card);border:1px solid var(--border-md);color:var(--text-dim);}
+.step-line{flex:1;height:1px;background:var(--border);}
+.step-line.done{background:#3a3a70;}
+.step-head{padding:16px 18px 4px;flex-shrink:0;}
+.step-num{font-family:var(--mono);font-size:9px;color:var(--accent-light);letter-spacing:.15em;margin-bottom:5px;}
+.step-title{font-size:17px;color:var(--text-primary);line-height:1.3;}
+.step-desc{font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:5px;line-height:1.55;}
+
+/* ── STEP 2 TAGS ── */
+.analyze-box{background:#080818;border:1px solid #2a2a50;border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:14px;}
+.analyze-group{display:flex;flex-direction:column;gap:6px;}
+.analyze-label{font-family:var(--mono);font-size:9px;color:var(--accent-light);letter-spacing:.15em;text-transform:uppercase;}
+.analyze-text{font-size:12px;color:var(--text-secondary);line-height:1.6;}
+.tag-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.etag{display:inline-flex;align-items:center;gap:3px;padding:3px 7px 3px 9px;border-radius:20px;font-family:var(--mono);font-size:9px;}
+.etag.blue{background:#1a1a35;color:#7788cc;border:1px solid #2a2a55;}
+.etag.green{background:#1a2a20;color:var(--green);border:1px solid #2a4030;}
+.etag.amber{background:#2a1e10;color:var(--amber);border:1px solid #40301a;}
+.etag-x{font-size:11px;opacity:.45;cursor:pointer;padding:0 1px;transition:opacity .15s;line-height:1;background:none;border:none;color:inherit;}
+.etag-x:hover,.etag-x:active{opacity:1;}
+.btn-tag-add{padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:10px;color:var(--text-dim);border:1px dashed var(--border-md);cursor:pointer;background:transparent;transition:border-color .15s,color .15s;-webkit-appearance:none;}
+.btn-tag-add:active{border-color:var(--border-hi);color:var(--accent-light);}
+
+/* ── STEP 3 CHAR ── */
+.char-block{background:#080810;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px;}
+.char-block-header{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.1em;}
+.btn-char-rm{color:var(--red);cursor:pointer;background:none;border:none;font-family:var(--mono);font-size:9px;padding:0;opacity:.6;transition:opacity .15s;}
+.btn-char-rm:active{opacity:1;}
+.char-parsed{padding:12px 14px;}
+.char-row{display:flex;gap:8px;margin-bottom:6px;align-items:center;}
+.char-key{font-family:var(--mono);font-size:9px;color:var(--text-dim);width:52px;flex-shrink:0;letter-spacing:.05em;}
+.char-input{flex:1;background:var(--bg-input);border:1px solid var(--border-md);border-radius:6px;padding:6px 9px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;outline:none;-webkit-appearance:none;transition:border-color .15s;}
+.char-input:focus{border-color:var(--border-hi);}
+.char-input-sm{width:60px;background:var(--bg-input);border:1px solid var(--border-md);border-radius:6px;padding:6px 8px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;text-align:center;outline:none;-webkit-appearance:none;}
+.btn-add-char{width:100%;padding:12px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-dim);cursor:pointer;background:none;border:none;letter-spacing:.08em;transition:color .15s;}
+.btn-add-char:active{color:var(--accent-light);}
+
+/* ── STEP 4 MODULES ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #14141e;}
+.toggle-info{flex:1;}
+.toggle-label{font-size:13px;color:var(--text-secondary);}
+.toggle-sub{font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:2px;}
+.toggle-switch{width:40px;height:24px;border-radius:12px;position:relative;cursor:pointer;flex-shrink:0;transition:background .2s;border:none;outline:none;}
+.toggle-switch.on{background:var(--accent);}
+.toggle-switch.off{background:#1e1e30;border:1px solid var(--border-md);}
+.toggle-knob{position:absolute;top:4px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;pointer-events:none;}
+.toggle-switch.on .toggle-knob{left:20px;}
+.toggle-switch.off .toggle-knob{left:4px;}
+.custom-fields{display:flex;flex-direction:column;gap:7px;}
+.custom-field-row{display:flex;gap:8px;align-items:center;}
+.input-field-name{flex:1;background:var(--bg-input);border:1px solid var(--border-md);border-radius:var(--rs);padding:9px 11px;font-family:var(--mono);font-size:11px;color:#8888cc;outline:none;-webkit-appearance:none;transition:border-color .15s;}
+.input-field-name:focus{border-color:var(--border-hi);}
+.input-field-val{width:56px;background:var(--bg-input);border:1px solid var(--border-md);border-radius:var(--rs);padding:9px 8px;font-family:var(--mono);font-size:12px;color:#6666aa;text-align:center;outline:none;-webkit-appearance:none;}
+.input-field-val:focus{border-color:var(--border-hi);}
+.btn-del-field{width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid #332222;border-radius:6px;color:#664444;font-size:14px;cursor:pointer;flex-shrink:0;transition:border-color .15s,color .15s;-webkit-appearance:none;}
+.btn-del-field:active{border-color:var(--red);color:var(--red);}
+.btn-add-field{padding:9px 14px;border-radius:var(--rs);background:var(--bg-card);border:1px dashed var(--border-md);font-family:var(--mono);font-size:11px;color:var(--text-dim);cursor:pointer;text-align:center;width:100%;transition:border-color .15s,color .15s;-webkit-appearance:none;}
+.btn-add-field:active{border-color:var(--border-hi);color:var(--accent-light);}
+
+/* ── STEP 5 SUMMARY ── */
+.summary-box{background:#080818;border:1px solid #2a2a50;border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:11px;}
+.summary-row{display:flex;flex-direction:column;gap:3px;}
+.summary-key{font-family:var(--mono);font-size:9px;color:var(--accent-light);letter-spacing:.12em;text-transform:uppercase;}
+.summary-val{font-size:12px;color:var(--text-secondary);line-height:1.5;}
+.summary-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px;}
+.stag{padding:2px 9px;border-radius:20px;font-family:var(--mono);font-size:9px;background:#1a2a20;color:var(--green);border:1px solid #2a4030;}
+
+/* ═══════════════════════════════
+   GAME SCREEN
+═══════════════════════════════ */
+.game-top{padding:44px 16px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.chapter-tag{font-family:var(--mono);font-size:10px;color:var(--accent-light);letter-spacing:.12em;}
+.btn-gear{width:30px;height:30px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border-md);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;-webkit-appearance:none;}
+.btn-gear:active{opacity:.6;}
+
+/* stat strip */
+.stat-strip{padding:8px 16px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;border-bottom:1px solid var(--border);}
+.stat-strip::-webkit-scrollbar{display:none;}
+.stat-pill{flex-shrink:0;padding:4px 10px;border-radius:20px;background:var(--bg-card);border:1px solid var(--border-md);font-family:var(--mono);font-size:10px;color:#aaaacc;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+.stat-dot{width:5px;height:5px;border-radius:50%;}
+.dot-blue{background:#6688ff;} .dot-pink{background:#ff6688;} .dot-amber{background:#ffaa44;} .dot-red{background:#ff4455;}
+
+/* sidequest banner */
+.sq-banner{margin:8px 16px 0;padding:10px 14px;background:#0e1a14;border:1px solid #22553a;border-left:3px solid var(--green);border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;}
+.sq-banner:active{opacity:.8;}
+.sq-text{flex:1;}
+.sq-label{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:.12em;margin-bottom:2px;}
+.sq-title{font-size:12px;color:#c0dcc8;line-height:1.4;}
+.sq-timer{font-family:var(--mono);font-size:10px;color:var(--amber);flex-shrink:0;}
+
+/* story */
+.story-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 10px;scrollbar-width:none;}
+.story-area::-webkit-scrollbar{display:none;}
+.neuro-box{background:#0d0d1f;border:1px solid #2233aa44;border-left:2px solid #4455cc;border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:#5566bb;line-height:1.7;}
+.neuro-header{color:#7788dd;font-size:9px;letter-spacing:.15em;margin-bottom:6px;}
+.story-text{font-size:14px;line-height:1.85;color:#d8d4cc;margin-bottom:12px;}
+.story-text p+p{margin-top:10px;}
+.story-dialogue{font-size:14px;line-height:1.8;color:var(--text-primary);padding-left:12px;border-left:2px solid #3a3a5a;margin:10px 0;font-style:italic;}
+.story-thinking{font-family:var(--mono);font-size:11px;color:var(--text-muted);line-height:1.6;padding:8px 12px;background:#0a0a18;border-radius:6px;margin:10px 0;}
+
+/* choices */
+.choices-area{padding:10px 16px 12px;display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--border);flex-shrink:0;}
+.choice-btn{width:100%;padding:11px 14px;background:var(--bg-card);border:1px solid var(--border-md);border-radius:10px;color:#c8c4dc;font-family:var(--serif);font-size:13px;line-height:1.5;text-align:left;cursor:pointer;display:flex;align-items:flex-start;gap:10px;transition:background .15s,border-color .15s;-webkit-appearance:none;}
+.choice-btn:active{background:var(--bg-hover);border-color:var(--border-hi);}
+.choice-label{font-family:var(--mono);font-size:10px;color:#5566aa;letter-spacing:.1em;padding-top:2px;flex-shrink:0;}
+.custom-input-wrap{display:none;position:relative;margin-top:4px;}
+.custom-input-wrap.open{display:block;}
+.custom-input{width:100%;background:var(--bg-input);border:1px solid #33335a;border-radius:10px;padding:10px 44px 10px 14px;color:#d0ccdc;font-family:var(--serif);font-size:13px;line-height:1.5;outline:none;resize:none;min-height:44px;caret-color:var(--accent-light);-webkit-appearance:none;}
+.custom-input::placeholder{color:var(--text-dim);}
+.custom-input:focus{border-color:var(--border-hi);}
+.btn-custom-send{position:absolute;right:10px;bottom:10px;width:28px;height:28px;border-radius:8px;background:#1e1e3a;border:1px solid var(--border-hi);color:#8877cc;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-appearance:none;}
+.btn-custom-send:active{background:var(--accent);}
+.btn-custom-toggle{width:100%;padding:9px 14px;background:var(--bg-card);border:1px dashed var(--border-md);border-radius:10px;color:#55558a;font-family:var(--mono);font-size:11px;letter-spacing:.08em;cursor:pointer;text-align:left;-webkit-appearance:none;transition:border-color .15s,color .15s;}
+.btn-custom-toggle.open{border-color:var(--border-hi);color:var(--accent-light);}
+.btn-custom-toggle:active{opacity:.7;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{padding:8px 0 28px;display:flex;justify-content:space-around;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg);}
+.nav-tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 18px;border-radius:8px;cursor:pointer;color:var(--text-dim);font-family:var(--mono);font-size:9px;letter-spacing:.05em;background:none;border:none;transition:color .15s;-webkit-appearance:none;}
+.nav-tab.active{color:var(--accent-light);}
+.nav-tab:active{opacity:.7;}
+.nav-tab-icon{font-size:17px;}
+
+/* ═══ QUEST TAB ═══ */
+.tab-page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;scrollbar-width:none;}
+.tab-page::-webkit-scrollbar{display:none;}
+.tab-header{padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab-title{font-size:15px;color:var(--text-primary);letter-spacing:.05em;}
+.tab-sub{font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-top:2px;letter-spacing:.1em;}
+.sect-label{padding:10px 18px 6px;font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.15em;text-transform:uppercase;flex-shrink:0;}
+.quest-list{padding:0 18px 6px;display:flex;flex-direction:column;gap:7px;flex-shrink:0;}
+.quest-card{padding:12px 14px;border-radius:10px;border:1px solid;}
+.quest-card.qmain{background:#0e0e20;border-color:#333388;}
+.quest-card.qside{background:#0e1a14;border-color:#225533;}
+.quest-card.qtimed{background:#1a100e;border-color:#553322;}
+.quest-type{font-family:var(--mono);font-size:9px;letter-spacing:.1em;margin-bottom:4px;}
+.qmain .quest-type{color:#6677cc;} .qside .quest-type{color:var(--green);} .qtimed .quest-type{color:var(--amber);}
+.quest-title{font-size:12px;color:#d0cce0;margin-bottom:5px;line-height:1.4;}
+.quest-desc{font-size:11px;color:var(--text-muted);line-height:1.5;}
+.quest-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+.quest-timer-badge{font-family:var(--mono);font-size:10px;color:var(--amber);background:#2a1a10;border:1px solid #553322;border-radius:20px;padding:2px 8px;}
+.btn-quest-go{font-family:var(--mono);font-size:9px;padding:4px 10px;border-radius:20px;border:1px solid var(--border-hi);background:#1a1a30;color:#8888cc;cursor:pointer;letter-spacing:.08em;-webkit-appearance:none;}
+.btn-quest-go:active{background:var(--accent);}
+.tab-divider{height:1px;background:var(--border);margin:6px 18px 0;flex-shrink:0;}
+
+/* ═══ LOG TAB ═══ */
+.filter-row{padding:8px 18px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0;}
+.search-input{flex:1;background:var(--bg-card);border:1px solid var(--border-md);border-radius:8px;padding:7px 11px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;outline:none;-webkit-appearance:none;}
+.search-input::placeholder{color:var(--text-dim);}
+.search-input:focus{border-color:var(--border-hi);}
+.filter-chip{padding:6px 11px;border-radius:20px;font-family:var(--mono);font-size:10px;cursor:pointer;white-space:nowrap;border:1px solid var(--border-md);color:var(--text-muted);background:var(--bg-card);-webkit-appearance:none;transition:background .15s,border-color .15s,color .15s;}
+.filter-chip.active{background:#1e1a35;border-color:var(--border-hi);color:#9988cc;}
+.filter-chip:active{opacity:.7;}
+.log-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 18px;display:flex;flex-direction:column;gap:7px;scrollbar-width:none;}
+.log-list::-webkit-scrollbar{display:none;}
+.log-entry{padding:12px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color .15s;}
+.log-entry.open{border-color:var(--border-hi);background:var(--bg-hover);}
+.log-entry:active{opacity:.8;}
+.log-page{font-family:var(--mono);font-size:9px;color:#5566aa;letter-spacing:.15em;margin-bottom:3px;}
+.log-title{font-size:12px;color:#d0ccdc;margin-bottom:5px;line-height:1.4;}
+.log-meta{font-family:var(--mono);font-size:10px;color:#3a3a55;margin-bottom:6px;}
+.log-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.log-tag{padding:2px 7px;border-radius:20px;font-family:var(--mono);font-size:9px;}
+.tag-main{background:#1a1a35;color:#6677cc;border:1px solid #2a2a50;}
+.tag-side{background:#1a2a20;color:var(--green);border:1px solid #2a4030;}
+.tag-event{background:#1a1a35;color:#6677cc;border:1px solid #2a2a50;}
+.tag-relation{background:#1a2a20;color:var(--green);border:1px solid #2a4030;}
+.tag-item{background:#2a1a15;color:var(--amber);border:1px solid #402a20;}
+.tag-threat{background:#2a1a1a;color:var(--red);border:1px solid #402020;}
+.log-detail{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+.detail-label{font-family:var(--mono);font-size:9px;color:#5566aa;letter-spacing:.1em;margin-bottom:3px;}
+.detail-text{font-size:11px;color:#9a98b0;line-height:1.55;margin-bottom:8px;}
+
+/* ═══ CHAR TAB ═══ */
+.char-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 18px;display:flex;flex-direction:column;gap:8px;scrollbar-width:none;}
+.char-list::-webkit-scrollbar{display:none;}
+.char-card{padding:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);}
+.char-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.char-avatar{width:42px;height:42px;border-radius:50%;background:#1e1e35;border:1px solid #33335a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.char-name{font-size:13px;color:var(--text-primary);margin-bottom:3px;}
+.char-role{font-family:var(--mono);font-size:10px;color:#55559a;}
+.char-relation-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-family:var(--mono);font-size:9px;background:#1a1a35;color:#7788cc;border:1px solid #2a2a55;white-space:nowrap;}
+.char-relation-tag.threat{background:#1a0f0f;color:var(--red);border-color:#4a2030;}
+.affinity-row{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-bottom:4px;}
+.bar-track{height:3px;background:#1e1e30;border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#4455aa,#8866dd);}
+.bar-fill.threat{background:linear-gradient(90deg,#aa2233,#cc3344);}
+.char-note{margin-top:8px;font-size:11px;color:#55556a;line-height:1.5;font-style:italic;}
+
+/* ═══ RESULT SCREEN ═══ */
+.result-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px 18px;scrollbar-width:none;}
+.result-area::-webkit-scrollbar{display:none;}
+.result-header{text-align:center;margin-bottom:24px;}
+.result-icon{font-size:42px;margin-bottom:10px;}
+.result-type{font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.15em;margin-bottom:6px;}
+.result-title{font-size:18px;color:var(--text-primary);line-height:1.4;}
+.result-section{margin-bottom:16px;}
+.result-section-label{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+.result-item{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #14141e;font-size:13px;color:#c0bcd8;line-height:1.5;}
+.result-item-icon{flex-shrink:0;font-size:14px;}
+.result-summary{font-size:13px;color:#888898;line-height:1.7;padding:12px 14px;background:#0e0e1a;border:1px solid var(--border);border-radius:8px;margin-bottom:16px;}
+.btn-result-back{width:100%;padding:14px;background:#1e1a35;border:1px solid var(--border-hi);border-radius:var(--r);color:#c0b8e8;font-family:var(--serif);font-size:14px;cursor:pointer;text-align:center;margin-top:8px;-webkit-appearance:none;}
+.btn-result-back:active{background:#2a2448;}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:absolute;inset:0;background:rgba(5,5,15,.78);display:flex;align-items:flex-end;z-index:100;padding-bottom:80px;}
+.modal-sheet{width:100%;background:#12121e;border-top:1px solid var(--border-md);border-radius:20px 20px 0 0;padding:20px 20px 28px;}
+.modal-handle{width:36px;height:3px;background:var(--border-md);border-radius:3px;margin:0 auto 16px;}
+.modal-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;margin-bottom:10px;}
+.badge-side{background:#0e1a14;color:var(--green);border:1px solid #225533;}
+.badge-timed{background:#1a100e;color:var(--amber);border:1px solid #553322;}
+.modal-title{font-size:16px;color:var(--text-primary);margin-bottom:8px;line-height:1.4;}
+.modal-desc{font-size:13px;color:#888898;line-height:1.6;margin-bottom:6px;}
+.modal-timer-line{font-family:var(--mono);font-size:11px;color:var(--amber);margin-bottom:14px;}
+.modal-reward{background:#0e0e1a;border:1px solid var(--border-md);border-radius:8px;padding:10px 12px;margin-bottom:16px;}
+.modal-reward-label{font-family:var(--mono);font-size:9px;color:#55558a;letter-spacing:.12em;margin-bottom:6px;}
+.modal-reward-item{font-size:12px;color:#aaa8c0;line-height:1.7;}
+.modal-btns{display:flex;gap:10px;}
+.btn-modal-primary{flex:1;padding:12px;background:#1e1a35;border:1px solid var(--border-hi);border-radius:10px;color:#c0b8e8;font-family:var(--serif);font-size:13px;cursor:pointer;text-align:center;-webkit-appearance:none;}
+.btn-modal-primary:active{background:#2a2448;}
+.btn-modal-secondary{padding:12px 16px;background:var(--bg-card);border:1px solid var(--border-md);border-radius:10px;color:#55558a;font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap;-webkit-appearance:none;}
+.btn-modal-secondary:active{opacity:.7;}
+
+/* ── LIGHT MODE ── */
+body.light {
+  --bg:#f5f3ee; --bg-card:#ffffff; --bg-input:#f0ede8; --bg-hover:#e8e4dc;
+  --border:#d8d4cc; --border-md:#c0bbb0; --border-hi:#5544aa;
+  --text-primary:#1a1a2e; --text-secondary:#2a2a40; --text-muted:#5a5870; --text-dim:#9a98b0;
+  --accent:#5544aa; --accent-light:#7766cc;
+  --green:#2a8a50; --amber:#aa7722; --red:#cc3344;
+}
+body.light .neuro-box { background:#eeeaf8; border-color:#c0b8e8; border-left-color:#7766cc; color:#5544aa; }
+body.light .neuro-header { color:#7766cc; }
+body.light .story-text { color:#2a2a40; }
+body.light .story-dialogue { color:#1a1a2e; border-left-color:#9988cc; }
+body.light .story-thinking { background:#eeeaf8; color:#5a5870; }
+body.light .choice-btn { background:#f0ede8; border-color:#c0bbb0; color:#2a2a40; }
+body.light .choice-btn:active { background:#e0dcd8; }
+body.light .choice-label { color:#7766cc; }
+body.light .btn-custom-toggle { background:#f0ede8; border-color:#c0bbb0; color:#7766cc; }
+body.light .custom-input { background:#f0ede8; border-color:#c0bbb0; color:#2a2a40; }
+body.light .game-card { background:#ffffff; border-color:#d8d4cc; }
+body.light .game-card:active { background:#f0ede8; }
+body.light .log-entry { background:#ffffff; border-color:#d8d4cc; }
+body.light .log-entry.open { background:#f0ede8; border-color:#7766cc; }
+body.light .char-card { background:#ffffff; border-color:#d8d4cc; }
+body.light .quest-card.qmain { background:#eeeaf8; border-color:#9988cc; }
+body.light .quest-card.qside { background:#e8f4ec; border-color:#44aa66; }
+body.light .quest-card.qtimed { background:#fdf0e8; border-color:#cc9944; }
+body.light .analyze-box { background:#eeeaf8; border-color:#c0b8e8; }
+body.light .summary-box { background:#eeeaf8; border-color:#c0b8e8; }
+body.light .prompt-block { background:#f0ede8; border-color:#d8d4cc; }
+body.light .prompt-preview { color:#9a98b0; }
+body.light .char-block { background:#f0ede8; border-color:#d8d4cc; }
+body.light .modal-sheet { background:#ffffff; border-color:#c0bbb0; }
+body.light .modal-reward { background:#f0ede8; border-color:#d8d4cc; }
+body.light .sq-banner { background:#e8f4ec; border-color:#44aa66; }
+body.light .bottom-nav { background:#ffffff; border-top-color:#d8d4cc; }
+body.light .input-text,body.light .input-textarea,body.light .api-input,
+body.light .input-number,body.light .input-field-name,body.light .input-field-val,
+body.light .search-input,body.light .char-input,body.light .char-input-sm { background:#f0ede8; border-color:#c0bbb0; color:#2a2a40; }
+body.light .model-chip { background:#f0ede8; border-color:#c0bbb0; color:#5a5870; }
+body.light .model-chip.active { background:#eeeaf8; border-color:#7766cc; color:#5544aa; }
+body.light .filter-chip { background:#f0ede8; border-color:#c0bbb0; color:#5a5870; }
+body.light .filter-chip.active { background:#eeeaf8; border-color:#7766cc; color:#5544aa; }
+body.light .bar-track { background:#d8d4cc; }
+body.light .toggle-switch.off { background:#d8d4cc; }
+body.light #toast { background:#ffffff; border-color:#c0bbb0; color:#2a2a40; }
+
+/* ── THEME TOGGLE BTN ── */
+.btn-theme {
+  width:30px; height:30px; border-radius:8px;
+  background:var(--bg-card); border:1px solid var(--border-md);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; cursor:pointer; -webkit-appearance:none;
+  transition:background .15s;
+}
+.btn-theme:active { opacity:.6; }
+
+/* ── IMPORT SCREEN ── */
+.import-note {
+  background:var(--bg-input);
+  border:1px solid var(--border-md);
+  border-radius:var(--rs);
+  padding:11px 13px;
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--text-muted);
+  line-height:1.7;
+}
+
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="screen-home">
+  <div style="position:absolute;top:52px;right:18px;z-index:10"><button class="btn-theme" id="btn-theme" onclick="toggleTheme()" title="切換深色/亮色">🌙</button></div>
+  <div class="hero">
+    <div class="hero-eyebrow">Interactive Novel Engine</div>
+    <div class="hero-title">故事引擎</div>
+    <div class="hero-sub">選擇一個世界，繼續你的旅途</div>
+  </div>
+  <div class="home-list-label" id="home-list-label">▸ 進行中的遊戲</div>
+  <div class="game-list" id="game-list"></div>
+  <div class="home-actions">
+    <button class="btn-new-game" onclick="goTo('screen-new-step1')">✦ 新遊戲</button>
+    <button class="btn-new-game" style="background:#1a2a1e;border-color:#44aa66;color:#a0ddb0;margin-top:0" onclick="goTo('screen-import-step1')">⬡ 匯入存檔</button>
+    <button class="btn-settings-link" onclick="goTo('screen-settings')">⚙ 設定 · API 金鑰</button>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="screen" id="screen-settings">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">設定</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="scroll-body">
+    <div class="section">
+      <div class="section-header">▸ API 金鑰</div>
+      <div>
+        <div class="field-label">GEMINI API KEY</div>
+        <div class="api-row">
+          <input class="api-input" id="gemini-key-input" type="password" placeholder="AIzaSy••••••••" oninput="onApiKeyChange()">
+          <div class="api-badge badge-none" id="gemini-key-badge">未設定</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">CLAUDE API KEY（備用）</div>
+        <div class="api-row">
+          <input class="api-input" id="claude-key-input" type="password" placeholder="sk-ant-••••••••" oninput="onApiKeyChange()">
+          <div class="api-badge badge-none" id="claude-key-badge">未設定</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">使用模型</div>
+        <div class="model-grid">
+          <button class="model-chip" data-model="gemini-2.5-flash-lite" onclick="selectModel(this)">3.1<br>Flash Lite</button>
+          <button class="model-chip active" data-model="gemini-2.5-flash" onclick="selectModel(this)">3.5<br>Flash</button>
+          <button class="model-chip" data-model="gemini-2.5-pro" onclick="selectModel(this)">3.1<br>Pro</button>
+          <button class="model-chip" data-model="claude" onclick="selectModel(this)">Claude<br>Sonnet</button>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">▸ 摘要 Prompt</div>
+      <div>
+        <div class="field-label">短摘要觸發間隔</div>
+        <div class="interval-row">
+          <input class="input-number" id="interval-short" type="number" min="3" max="50" value="10">
+          <span class="interval-unit">回合觸發一次</span>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">短摘要 Prompt</div>
+        <div class="prompt-block">
+          <div class="prompt-preview" id="prompt-short-preview"></div>
+          <div class="prompt-footer"><button class="btn-edit-prompt" onclick="editPrompt('short')">✎ 編輯</button></div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">深度歸檔觸發間隔</div>
+        <div class="interval-row">
+          <input class="input-number" id="interval-deep" type="number" min="10" max="100" value="20">
+          <span class="interval-unit">回合觸發一次</span>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">深度歸檔 Prompt</div>
+        <div class="prompt-block">
+          <div class="prompt-preview" id="prompt-deep-preview"></div>
+          <div class="prompt-footer"><button class="btn-edit-prompt" onclick="editPrompt('deep')">✎ 編輯</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">▸ 存檔</div>
+      <button class="btn-danger" onclick="exportCapsule()">⬡ 匯出時空膠囊</button>
+      <button class="btn-danger" onclick="confirmClearAll()">⚠ 清除所有遊戲資料</button>
+    </div>
+    <div class="version-note">INTERACTIVE NOVEL ENGINE · v0.1</div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" onclick="saveSettings()">儲存設定</button>
+  </div>
+</div>
+
+<!-- ══ PROMPT EDITOR ══ -->
+<div class="screen" id="screen-prompt-editor">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title" id="prompt-editor-title">編輯 Prompt</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="scroll-body" style="gap:10px">
+    <div class="field-hint">此 Prompt 將在觸發時送給 AI 產出摘要。</div>
+    <textarea class="input-textarea" id="prompt-editor-ta" style="min-height:320px"></textarea>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">取消</button>
+    <button class="btn-primary" onclick="savePrompt()">儲存</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 1 ══ -->
+<div class="screen" id="screen-new-step1">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot current">1</div><div class="step-line"></div>
+    <div class="step-dot pending">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 01 / 05</div>
+    <div class="step-title">貼入世界觀設定</div>
+    <div class="step-desc">貼入現有模擬器 prompt 或自由描述，AI 會自動分析並預填後續設定。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">遊戲名稱</div>
+      <input class="input-text" id="new-game-name" placeholder="例：哨兵嚮導 · 帝國白塔篇" maxlength="40">
+    </div>
+    <div>
+      <div class="field-label">世界觀 / 設定文</div>
+      <div class="field-hint">可以貼現有 prompt 或自由描述，AI 將自動識別類型與所需欄位。</div>
+      <textarea class="input-textarea" id="new-game-worldview" rows="12" placeholder="貼入你的模擬器設定、角色卡、或世界觀說明……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" id="btn-analyze" onclick="runAnalysis()">自動分析 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 2 ══ -->
+<div class="screen" id="screen-new-step2">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 02 / 05</div>
+    <div class="step-title">確認分析結果</div>
+    <div class="step-desc">點 ✕ 刪除不需要的 tag，點 ＋ 自行新增。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="analyze-box">
+      <div class="analyze-group">
+        <div class="analyze-label">世界觀類型</div>
+        <div class="tag-row" id="tags-world"></div>
+      </div>
+      <div class="analyze-group">
+        <div class="analyze-label">建議開啟欄位</div>
+        <div class="tag-row" id="tags-fields"></div>
+      </div>
+      <div class="analyze-group">
+        <div class="analyze-label">偵測到的敘事風格</div>
+        <div class="analyze-text" id="detected-style">—</div>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">敘事風格補充（可自填）</div>
+      <div class="field-hint">這段文字會直接加入 AI 的 system prompt。</div>
+      <textarea class="input-textarea" id="style-supplement" rows="4" placeholder="例：輸出請帶科技感資訊框，選項風格幽默，角色不得使用霸總詞彙……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">重新分析</button>
+    <button class="btn-primary" onclick="goTo('screen-new-step3')">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 3 ══ -->
+<div class="screen" id="screen-new-step3">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 03 / 05</div>
+    <div class="step-title">貼入角色卡</div>
+    <div class="step-desc">貼入角色卡文字，AI 自動解析，解析完可手動微調。可以一次貼多個角色。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">角色卡原文</div>
+      <textarea class="input-textarea" id="charcard-input" rows="6" placeholder="姓名：雷恩·沃爾克&#10;職業：帝國首席哨兵 · S級&#10;精神體：白牙（銀白巨狼）&#10;…"></textarea>
+      <div style="margin-top:8px">
+        <button class="btn-ghost" id="btn-parse-char" style="width:100%;text-align:center" onclick="parseCharCards()">解析角色卡 →</button>
+      </div>
+    </div>
+    <div id="parsed-chars-area" style="display:none">
+      <div class="field-label">解析結果 · 可微調</div>
+      <div id="parsed-chars-list"></div>
+      <button class="btn-add-char" onclick="addBlankChar()">＋ 手動新增角色</button>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" onclick="goTo('screen-new-step4')">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 4 ══ -->
+<div class="screen" id="screen-new-step4">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 04 / 05</div>
+    <div class="step-title">模組與狀態欄位</div>
+    <div class="step-desc">開關功能模組，並設定自訂數值欄位的名稱與初始值。</div>
+  </div>
+  <div class="scroll-body" style="gap:6px">
+    <div class="field-label" style="margin-bottom:4px">模組開關</div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">支線任務系統</div><div class="toggle-sub">觸發提示、限時支線</div></div>
+      <button class="toggle-switch on" id="toggle-sidequest" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">戰鬥系統</div><div class="toggle-sub">遭遇戰、技能判定</div></div>
+      <button class="toggle-switch off" id="toggle-combat" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">好感度顯示</div><div class="toggle-sub">角色面板進度條</div></div>
+      <button class="toggle-switch on" id="toggle-affinity" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">金錢系統</div><div class="toggle-sub">資產、交易紀錄</div></div>
+      <button class="toggle-switch off" id="toggle-money" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="field-label" style="margin-top:14px">自訂數值欄位</div>
+    <div class="field-hint">欄位名稱與初始值，最多 6 個。</div>
+    <div class="custom-fields" id="custom-fields-list"></div>
+    <button class="btn-add-field" onclick="addCustomField()">＋ 新增欄位</button>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" onclick="buildSummaryAndGoStep5()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 5 ══ -->
+<div class="screen" id="screen-new-step5">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 05 / 05</div>
+    <div class="step-title">確認並開始</div>
+    <div class="step-desc">設定總覽，確認無誤後開始第一幕。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="summary-box" id="summary-box"></div>
+    <div>
+      <div class="field-label">開場提示（選填）</div>
+      <div class="field-hint">告訴 AI 從哪裡開始，例如場景描述或特殊指示。</div>
+      <textarea class="input-textarea" id="opening-hint" rows="3" placeholder="例：從黎海寧第一次走進十三號疏導室開始……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-start-game" onclick="startGame()">✦ 開始遊戲</button>
+  </div>
+</div>
+
+<!-- ══ GAME MAIN ══ -->
+<div class="screen" id="screen-game">
+  <!-- top -->
+  <div class="game-top">
+    <div class="chapter-tag" id="game-chapter-tag">Ch.01 · p.001</div>
+    <div style="display:flex;gap:8px"><button class="btn-theme" onclick="toggleTheme()">🌙</button><button class="btn-gear" onclick="goTo('screen-settings')">⚙</button></div>
+  </div>
+  <!-- stat strip -->
+  <div class="stat-strip" id="game-stat-strip"></div>
+  <!-- sidequest banner (hidden by default) -->
+  <div class="sq-banner" id="sq-banner" style="display:none" onclick="showSqModal()">
+    <div style="font-size:14px">◈</div>
+    <div class="sq-text">
+      <div class="sq-label">▶ 支線任務觸發</div>
+      <div class="sq-title" id="sq-banner-title"></div>
+    </div>
+    <div class="sq-timer" id="sq-banner-timer"></div>
+  </div>
+  <!-- story -->
+  <div class="story-area" id="story-area">
+    <div class="story-thinking" id="story-loading" style="display:none">
+      <span class="spinner"></span>故事生成中……
+    </div>
+  </div>
+  <!-- choices -->
+  <div class="choices-area" id="choices-area">
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:center;padding:8px 0;">等待劇情生成…</div>
+  </div>
+  <!-- bottom nav -->
+  <div class="bottom-nav">
+    <button class="nav-tab active" id="tab-btn-story" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+    <button class="nav-tab" id="tab-btn-quest" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+    <button class="nav-tab" id="tab-btn-log" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+    <button class="nav-tab" id="tab-btn-char" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+  </div>
+
+  <!-- QUEST TAB -->
+  <div class="tab-page" id="tab-quest" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
+    <div class="tab-header">
+      <div class="tab-title">任務</div>
+      <div class="tab-sub" id="quest-sub">主線 1 條 · 支線 0 條</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="sect-label">▸ 進行中</div>
+      <div class="quest-list" id="quest-active-list"></div>
+      <div class="tab-divider"></div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab active" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
+  </div>
+
+  <!-- LOG TAB -->
+  <div class="tab-page" id="tab-log" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
+    <div class="tab-header">
+      <div class="tab-title">日誌</div>
+      <div class="tab-sub" id="log-sub">歷史紀錄</div>
+    </div>
+    <div class="filter-row">
+      <input class="search-input" id="log-search" placeholder="搜尋事件或 tag…" oninput="renderLogList()">
+      <button class="filter-chip active" id="chip-all" onclick="setLogFilter('all')">全部</button>
+      <button class="filter-chip" id="chip-main" onclick="setLogFilter('main')">主線</button>
+      <button class="filter-chip" id="chip-side" onclick="setLogFilter('side')">支線</button>
+    </div>
+    <div class="log-list" id="log-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab active" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
+  </div>
+
+  <!-- CHAR TAB -->
+  <div class="tab-page" id="tab-char" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
+    <div class="tab-header">
+      <div class="tab-title">角色面板</div>
+      <div class="tab-sub" id="char-sub">已認識 0 人</div>
+    </div>
+    <div class="filter-row">
+      <input class="search-input" id="char-search" placeholder="搜尋角色…" oninput="renderCharList()">
+      <button class="filter-chip active" id="chip-char-all" onclick="setCharFilter('all')">全部</button>
+      <button class="filter-chip" id="chip-char-ally" onclick="setCharFilter('ally')">盟友</button>
+      <button class="filter-chip" id="chip-char-threat" onclick="setCharFilter('threat')">威脅</button>
+    </div>
+    <div class="char-list" id="char-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab active" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
+  </div>
+
+  <!-- SQ MODAL -->
+  <div class="modal-overlay" id="sq-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-badge" id="sq-modal-badge">支線任務</div>
+      <div class="modal-title" id="sq-modal-title"></div>
+      <div class="modal-desc" id="sq-modal-desc"></div>
+      <div class="modal-timer-line" id="sq-modal-timer" style="display:none"></div>
+      <div class="modal-reward" id="sq-modal-reward" style="display:none">
+        <div class="modal-reward-label">✦ 預期獎勵</div>
+        <div class="modal-reward-item" id="sq-modal-reward-text"></div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-modal-primary" onclick="startSidequest()">進行支線（暫停主線）</button>
+        <button class="btn-modal-secondary" onclick="dismissSqModal()">稍後再說</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ QUEST RESULT ══ -->
+<div class="screen" id="screen-result">
+  <div class="top-bar" style="border:none;">
+    <div style="width:48px"></div>
+    <div class="top-bar-title">支線完成</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="result-area" id="result-area"></div>
+  <div class="bottom-bar">
+    <button class="btn-primary" onclick="returnToMain()">↩ 回到主線</button>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════
+   DEFAULTS
+════════════════════════════ */
+const PROMPT_SHORT = `【暫停扮演，記憶關鍵段落】
+請提取最近對話的關鍵段落，產出字數約 300 字以內的摘要。
+
+### 核心事件
+- [事件]：（簡述具有推進力的事件經過）
+
+### 關鍵對話/行為
+- [對話/行為]：（具有實質進展的對話或行為，包含角色當下心境）
+
+### 心理與情感
+- [心理狀態]：（角色情感偏移、心理防線變化，或未說出口的內心糾葛）
+
+### 錨點與懸念
+- [未完結的敘事]：（當前停留的話題、氣氛，或剛獲得的微小線索）
+
+### 時間註記：（世界觀時間 yyyy/mm/dd HH:mm）
+
+（整理完畢後，過濾偏執、強迫、冷酷等為劇情張力捏造的非事實超譯詞彙。）`;
+
+const PROMPT_DEEP = `【暫停扮演，統合劇情大綱】
+請深度提取所有資訊，產出字數約 3000 字的總結。
+
+- 敘事視角：全知客觀第三人稱
+- 保留物理動作、感官細節與心理狀態描寫
+
+### 核心事件與情感里程碑
+- [事件/質變]：（詳細敘述事件經過及雙方心理防線、情感狀態的具體變化）
+
+### 關鍵對話與決策
+- [對話/決策]：（關鍵台詞或行動）—— 影響評估：（對劇情的實質推動力）
+
+### 重要物品與認知
+- [物品名稱]：—— 角色認知：（態度、執念或象徵意義）
+
+### 待辦事件與隱藏伏筆
+- [懸念/目標]：（未解決的任務、隱患、未揭露的伏筆或即將觸發的事件）
+
+### 時間註記：（世界觀時間 yyyy/mm/dd HH:mm）`;
+
+/* ════════════════════════════
+   STATE
+════════════════════════════ */
+let S = {
+  settings: { geminiKey:'', claudeKey:'', model:'gemini-2.5-flash', intervalShort:10, intervalDeep:20, promptShort:PROMPT_SHORT, promptDeep:PROMPT_DEEP },
+  games: [],
+  activeGameId: null,
+  newGame: { name:'', worldview:'', worldTags:[], fieldTags:[], detectedStyle:'', styleSupp:'', characters:[], modules:{sidequest:true,combat:false,affinity:true,money:false}, customFields:[] },
+  editPromptType: null,
+  screenStack: ['screen-home'],
+  // game runtime
+  rt: { tab:'story', logFilter:'all', charFilter:'all', openLogId:null, sqTimer:null, pendingSq:null }
+};
+
+/* ════════════════════════════
+   INDEXEDDB
+════════════════════════════ */
+let db;
+async function openDB() {
+  return new Promise((res,rej) => {
+    const r = indexedDB.open('novel-engine-v1', 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+    r.onsuccess = e => { db = e.target.result; res(); };
+    r.onerror = e => rej(e);
+  });
+}
+function dbSet(k,v){ return new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(v,k); tx.oncomplete=res; tx.onerror=rej; }); }
+function dbGet(k){ return new Promise((res,rej)=>{ const tx=db.transaction('kv','readonly'); const r=tx.objectStore('kv').get(k); r.onsuccess=()=>res(r.result); r.onerror=rej; }); }
+async function persist(){ await dbSet('settings', S.settings); await dbSet('games', S.games); }
+async function load(){ const s=await dbGet('settings'); if(s) S.settings={...S.settings,...s}; const g=await dbGet('games'); if(g) S.games=g; }
+
+/* ════════════════════════════
+   ROUTER
+════════════════════════════ */
+function goTo(id){
+  const prev = S.screenStack[S.screenStack.length-1];
+  document.getElementById(prev)?.classList.remove('active');
+  document.getElementById(id)?.classList.add('active');
+  S.screenStack.push(id);
+  if(id==='screen-home') renderHome();
+  if(id==='screen-settings') renderSettings();
+  if(id==='screen-game') renderGameScreen();
+}
+function goBack(){
+  if(S.screenStack.length<=1) return;
+  const cur = S.screenStack.pop();
+  document.getElementById(cur)?.classList.remove('active');
+  const prev = S.screenStack[S.screenStack.length-1];
+  document.getElementById(prev)?.classList.add('active');
+  if(prev==='screen-home') renderHome();
+  if(prev==='screen-settings') renderSettings();
+  if(prev==='screen-game') renderGameScreen();
+}
+
+/* ════════════════════════════
+   TOAST
+════════════════════════════ */
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+/* ════════════════════════════
+   HOME
+════════════════════════════ */
+function renderHome(){
+  const list=document.getElementById('game-list');
+  const label=document.getElementById('home-list-label');
+  list.innerHTML='';
+  if(!S.games.length){
+    label.style.display='none';
+    list.innerHTML='<div class="home-empty">還沒有任何遊戲<br>點下方「✦ 新遊戲」開始你的第一個世界</div>';
+    return;
+  }
+  label.style.display='';
+  S.games.forEach(g=>{
+    const btn=document.createElement('button');
+    btn.className='game-card';
+    btn.innerHTML=`<div class="game-icon">${g.icon||'📖'}</div><div class="game-info"><div class="game-name">${esc(g.name)}</div><div class="game-meta">${esc(g.meta||'尚未開始')}</div></div><div class="game-arrow">›</div>`;
+    btn.onclick=()=>{ S.activeGameId=g.id; goTo('screen-game'); };
+    list.appendChild(btn);
+  });
+}
+
+/* ════════════════════════════
+   SETTINGS
+════════════════════════════ */
+function renderSettings(){
+  const s=S.settings;
+  document.getElementById('gemini-key-input').value=s.geminiKey||'';
+  document.getElementById('claude-key-input').value=s.claudeKey||'';
+  updateApiBadges();
+  document.querySelectorAll('.model-chip').forEach(c=>c.classList.toggle('active',c.dataset.model===s.model));
+  document.getElementById('interval-short').value=s.intervalShort;
+  document.getElementById('interval-deep').value=s.intervalDeep;
+  document.getElementById('prompt-short-preview').textContent=(s.promptShort||PROMPT_SHORT).slice(0,140)+'…';
+  document.getElementById('prompt-deep-preview').textContent=(s.promptDeep||PROMPT_DEEP).slice(0,140)+'…';
+}
+function onApiKeyChange(){
+  S.settings.geminiKey=document.getElementById('gemini-key-input').value.trim();
+  S.settings.claudeKey=document.getElementById('claude-key-input').value.trim();
+  updateApiBadges();
+}
+function updateApiBadges(){
+  const gk=S.settings.geminiKey; const ck=S.settings.claudeKey;
+  const gb=document.getElementById('gemini-key-badge');
+  const cb=document.getElementById('claude-key-badge');
+  gb.textContent=gk.length>10?'✓ 已填入':'未設定';
+  gb.className='api-badge '+(gk.length>10?'badge-ok':'badge-none');
+  cb.textContent=ck.length>10?'✓ 已填入':'未設定';
+  cb.className='api-badge '+(ck.length>10?'badge-ok':'badge-none');
+}
+function selectModel(el){
+  document.querySelectorAll('.model-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  S.settings.model=el.dataset.model;
+}
+function editPrompt(type){
+  S.editPromptType=type;
+  document.getElementById('prompt-editor-title').textContent=type==='short'?'短摘要 Prompt':'深度歸檔 Prompt';
+  document.getElementById('prompt-editor-ta').value=type==='short'?(S.settings.promptShort||PROMPT_SHORT):(S.settings.promptDeep||PROMPT_DEEP);
+  goTo('screen-prompt-editor');
+}
+function savePrompt(){
+  const val=document.getElementById('prompt-editor-ta').value.trim();
+  if(S.editPromptType==='short') S.settings.promptShort=val;
+  else S.settings.promptDeep=val;
+  goBack(); toast('Prompt 已儲存');
+}
+async function saveSettings(){
+  S.settings.geminiKey=document.getElementById('gemini-key-input').value.trim();
+  S.settings.claudeKey=document.getElementById('claude-key-input').value.trim();
+  S.settings.intervalShort=parseInt(document.getElementById('interval-short').value)||10;
+  S.settings.intervalDeep=parseInt(document.getElementById('interval-deep').value)||20;
+  await persist(); toast('設定已儲存');
+}
+function exportCapsule(){
+  const g=activeGame();
+  if(!g){ toast('請先進入一個遊戲'); return; }
+  const blob=new Blob([JSON.stringify(g,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`${g.name}-capsule.json`; a.click();
+  URL.revokeObjectURL(url);
+}
+function confirmClearAll(){
+  if(confirm('確定要清除所有遊戲資料嗎？此動作無法復原。')){ S.games=[]; persist(); toast('資料已清除'); renderHome(); }
+}
+
+/* ════════════════════════════
+   NEW GAME WIZARD
+════════════════════════════ */
+async function runAnalysis(){
+  const name=document.getElementById('new-game-name').value.trim();
+  const wv=document.getElementById('new-game-worldview').value.trim();
+  if(!name){ toast('請先填入遊戲名稱'); return; }
+  if(wv.length<20){ toast('世界觀描述太短，請補充內容'); return; }
+  if(!S.settings.geminiKey){ toast('請先在設定頁填入 Gemini API Key'); return; }
+  const btn=document.getElementById('btn-analyze');
+  btn.innerHTML='<span class="spinner"></span>分析中…'; btn.disabled=true;
+  S.newGame.name=name; S.newGame.worldview=wv;
+  try{
+    const res=await callGemini(
+      `你是互動小說引擎的設定分析器。根據以下世界觀，以純 JSON 輸出（不要 markdown、不要說明）：
+{"worldTags":["標籤1","標籤2"],"fieldTags":["欄位1","欄位2"],"style":"一句話描述敘事風格"}
+worldTags：3-5個世界觀類型標籤。fieldTags：3-6個建議狀態欄位。style：敘事風格一句話。
+世界觀：\n${wv}`
+    );
+    let p; try{ p=JSON.parse(res.replace(/```json|```/g,'').trim()); }catch{ throw new Error('AI 回傳格式錯誤'); }
+    S.newGame.worldTags=p.worldTags||[]; S.newGame.fieldTags=p.fieldTags||[]; S.newGame.detectedStyle=p.style||'';
+    renderStep2(); goTo('screen-new-step2');
+  }catch(e){ const msg = e.message||'';
+    const isQuota = msg.includes('Quota') || msg.includes('quota') || msg.includes('429');
+    const isKey = msg.includes('API_KEY') || msg.includes('invalid') || msg.includes('401');
+    const hint = isQuota ? '免費額度已用完，請至 Google AI Studio 開啟付費或換模型' : isKey ? '請確認 API Key 是否正確' : msg||'未知錯誤';
+    toast('分析失敗：'+hint); }
+  finally{ btn.innerHTML='自動分析 →'; btn.disabled=false; }
+}
+
+function renderStep2(){
+  renderTags('tags-world', S.newGame.worldTags, 'blue');
+  renderTags('tags-fields', S.newGame.fieldTags, 'green');
+  document.getElementById('detected-style').textContent=S.newGame.detectedStyle||'—';
+  document.getElementById('style-supplement').value=S.newGame.styleSupp||'';
+}
+
+function renderTags(cid, arr, cls){
+  const c=document.getElementById(cid); c.innerHTML='';
+  arr.forEach((t,i)=>{
+    const s=document.createElement('span'); s.className=`etag ${cls}`;
+    s.innerHTML=esc(t)+`<button class="etag-x" onclick="removeTag('${cid}',${i})">✕</button>`;
+    c.appendChild(s);
+  });
+  const add=document.createElement('button'); add.className='btn-tag-add'; add.textContent='＋';
+  add.onclick=()=>{ const v=prompt('新增 tag：'); if(v?.trim()){ arr.push(v.trim()); renderTags(cid,arr,cls); } };
+  c.appendChild(add);
+}
+
+function removeTag(cid, i){
+  if(cid==='tags-world'){ S.newGame.worldTags.splice(i,1); renderTags(cid,S.newGame.worldTags,'blue'); }
+  else { S.newGame.fieldTags.splice(i,1); renderTags(cid,S.newGame.fieldTags,'green'); }
+}
+
+async function parseCharCards(){
+  const raw=document.getElementById('charcard-input').value.trim();
+  if(raw.length<10){ toast('請先貼入角色卡內容'); return; }
+  if(!S.settings.geminiKey){ toast('請先設定 Gemini API Key'); return; }
+  const btn=document.getElementById('btn-parse-char');
+  btn.innerHTML='<span class="spinner"></span>解析中…'; btn.disabled=true;
+  try{
+    const res=await callGemini(
+      `你是角色卡解析器。將以下角色卡解析為 JSON 陣列（純 JSON，不要 markdown）：
+[{"name":"姓名","role":"職業/身分","relation":"與主角關係","affinity":50,"notes":"精神體或特殊設定一兩句"}]
+角色卡：\n${raw}`
+    );
+    let chars; try{ chars=JSON.parse(res.replace(/```json|```/g,'').trim()); if(!Array.isArray(chars)) chars=[chars]; }catch{ throw new Error('格式錯誤'); }
+    S.newGame.characters=chars; renderParsedChars();
+  }catch(e){ toast('解析失敗：'+e.message); }
+  finally{ btn.innerHTML='解析角色卡 →'; btn.disabled=false; }
+}
+
+function renderParsedChars(){
+  const area=document.getElementById('parsed-chars-area');
+  const list=document.getElementById('parsed-chars-list');
+  area.style.display=''; list.innerHTML='';
+  S.newGame.characters.forEach((c,i)=>{
+    const d=document.createElement('div'); d.className='char-block';
+    d.innerHTML=`<div class="char-block-header">${esc(c.name||'未命名')}<button class="btn-char-rm" onclick="removeChar(${i})">✕ 移除</button></div>
+    <div class="char-parsed">
+      <div class="char-row"><div class="char-key">職業</div><input class="char-input" value="${esc(c.role||'')}" oninput="S.newGame.characters[${i}].role=this.value"></div>
+      <div class="char-row"><div class="char-key">關係</div><input class="char-input" value="${esc(c.relation||'')}" oninput="S.newGame.characters[${i}].relation=this.value"></div>
+      <div class="char-row"><div class="char-key">好感初值</div><input class="char-input-sm" type="number" min="0" max="100" value="${c.affinity||50}" oninput="S.newGame.characters[${i}].affinity=+this.value"></div>
+      <div class="char-row"><div class="char-key">備註</div><input class="char-input" value="${esc(c.notes||'')}" oninput="S.newGame.characters[${i}].notes=this.value"></div>
+    </div>`;
+    list.appendChild(d);
+  });
+}
+function removeChar(i){ S.newGame.characters.splice(i,1); if(!S.newGame.characters.length) document.getElementById('parsed-chars-area').style.display='none'; else renderParsedChars(); }
+function addBlankChar(){ S.newGame.characters.push({name:'新角色',role:'',relation:'',affinity:50,notes:''}); document.getElementById('parsed-chars-area').style.display=''; renderParsedChars(); }
+
+function toggleSwitch(btn){
+  const on=btn.classList.contains('on');
+  btn.classList.toggle('on',!on); btn.classList.toggle('off',on);
+  const map={'toggle-sidequest':'sidequest','toggle-combat':'combat','toggle-affinity':'affinity','toggle-money':'money'};
+  const key=map[btn.id]; if(key) S.newGame.modules[key]=!on;
+}
+
+function addCustomField(){
+  if(S.newGame.customFields.length>=6){ toast('最多 6 個自訂欄位'); return; }
+  S.newGame.customFields.push({name:'',value:''}); renderCustomFields();
+}
+function renderCustomFields(){
+  const list=document.getElementById('custom-fields-list'); list.innerHTML='';
+  S.newGame.customFields.forEach((f,i)=>{
+    const row=document.createElement('div'); row.className='custom-field-row';
+    row.innerHTML=`<input class="input-field-name" placeholder="欄位名稱" value="${esc(f.name)}" oninput="S.newGame.customFields[${i}].name=this.value"><input class="input-field-val" placeholder="初始值" value="${esc(f.value)}" oninput="S.newGame.customFields[${i}].value=this.value"><button class="btn-del-field" onclick="delCustomField(${i})">×</button>`;
+    list.appendChild(row);
+  });
+}
+function delCustomField(i){ S.newGame.customFields.splice(i,1); renderCustomFields(); }
+
+function buildSummaryAndGoStep5(){
+  S.newGame.styleSupp=document.getElementById('style-supplement').value.trim();
+  const mods=S.newGame.modules;
+  const activeMods=[mods.sidequest?'支線任務':null,mods.combat?'戰鬥':null,mods.affinity?'好感度':null,mods.money?'金錢':null].filter(Boolean);
+  const fields=S.newGame.customFields.filter(f=>f.name).map(f=>`${f.name} ${f.value}`).join('・')||'（未設定）';
+  const chars=S.newGame.characters.map(c=>c.name).join('、')||'（未設定）';
+  document.getElementById('summary-box').innerHTML=`
+    <div class="summary-row"><div class="summary-key">遊戲名稱</div><div class="summary-val">${esc(S.newGame.name)}</div></div>
+    <div class="summary-row"><div class="summary-key">世界觀</div><div class="summary-val">${esc(S.newGame.worldTags.join(' · '))}</div></div>
+    <div class="summary-row"><div class="summary-key">敘事風格</div><div class="summary-val">${esc(S.newGame.detectedStyle||'—')}</div></div>
+    <div class="summary-row"><div class="summary-key">角色</div><div class="summary-val">${esc(chars)}</div></div>
+    <div class="summary-row"><div class="summary-key">開啟模組</div><div class="summary-tags">${activeMods.map(m=>`<span class="stag">${m}</span>`).join('')||'<span style="color:var(--text-dim);font-size:11px">（全部關閉）</span>'}</div></div>
+    <div class="summary-row"><div class="summary-key">自訂欄位</div><div class="summary-val">${esc(fields)}</div></div>
+    <div class="summary-row"><div class="summary-key">模型</div><div class="summary-val">${esc(S.settings.model)}${S.settings.geminiKey?' · ✓':' · ⚠ 請先設定 API Key'}</div></div>`;
+  goTo('screen-new-step5');
+}
+
+async function startGame(){
+  if(!S.settings.geminiKey){ toast('請先設定 Gemini API Key'); return; }
+  const btn=document.getElementById('btn-start-game');
+  btn.innerHTML='<span class="spinner"></span>建立中…'; btn.disabled=true;
+  try{
+    const id=Date.now().toString();
+    const g={
+      id, name:S.newGame.name, icon:'📖',
+      meta:'Ch.01 · p.001 · 剛開始',
+      worldview:S.newGame.worldview,
+      worldTags:[...S.newGame.worldTags],
+      fieldTags:[...S.newGame.fieldTags],
+      detectedStyle:S.newGame.detectedStyle,
+      styleSupp:S.newGame.styleSupp,
+      characters:S.newGame.characters.map(c=>({...c})),
+      modules:{...S.newGame.modules},
+      customFields:S.newGame.customFields.map(f=>({...f})),
+      openingHint:document.getElementById('opening-hint').value.trim(),
+      createdAt:Date.now(),
+      page:1, chapter:1,
+      summaries:[], history:[], logs:[],
+      quests:[], snapshot:{},
+      turnCount:0,
+      mode:'main', // 'main' | 'side'
+      savedMainState:null,
+    };
+    g.customFields.forEach(f=>{ if(f.name) g.snapshot[f.name]=f.value; });
+    g.characters.forEach(c=>{ if(c.name) g.snapshot[`好感_${c.name}`]=c.affinity; });
+    // Add default main quest
+    g.quests.push({ id:'q_main_1', type:'main', title:`Ch.01 主線`, desc:'故事剛剛開始……', active:true, timed:false });
+    S.games.push(g); S.activeGameId=id;
+    await persist();
+    // reset wizard
+    S.newGame={name:'',worldview:'',worldTags:[],fieldTags:[],detectedStyle:'',styleSupp:'',characters:[],modules:{sidequest:true,combat:false,affinity:true,money:false},customFields:[]};
+    S.screenStack=['screen-home'];
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    goTo('screen-game');
+    // kick off first turn
+    await generateStory(g, g.openingHint||'請開始故事的第一幕。');
+  }catch(e){ toast('建立失敗：'+(e.message||'未知錯誤')); }
+  finally{ btn.innerHTML='✦ 開始遊戲'; btn.disabled=false; }
+}
+
+/* ════════════════════════════
+   GAME SCREEN
+════════════════════════════ */
+function activeGame(){ return S.games.find(g=>g.id===S.activeGameId); }
+
+function renderGameScreen(){
+  const g=activeGame(); if(!g) return;
+  document.getElementById('game-chapter-tag').textContent=`Ch.${g.chapter.toString().padStart(2,'0')} · p.${g.page.toString().padStart(3,'0')}`;
+  renderStatStrip(g);
+  renderQuestTab(g);
+  renderLogList();
+  renderCharList();
+}
+
+function renderStatStrip(g){
+  const strip=document.getElementById('game-stat-strip'); strip.innerHTML='';
+  const dotCls=['dot-blue','dot-pink','dot-amber','dot-red','dot-blue'];
+  Object.entries(g.snapshot).forEach(([k,v],i)=>{
+    const pill=document.createElement('div'); pill.className='stat-pill';
+    pill.innerHTML=`<span class="stat-dot ${dotCls[i%dotCls.length]}"></span>${esc(k)} ${esc(String(v))}`;
+    strip.appendChild(pill);
+  });
+}
+
+/* tab switching */
+function switchTab(tab){
+  const g=activeGame(); if(!g) return;
+  S.rt.tab=tab;
+  ['story','quest','log','char'].forEach(t=>{
+    document.getElementById(`tab-btn-${t}`).classList.toggle('active',t===tab);
+  });
+  ['quest','log','char'].forEach(t=>{
+    const el=document.getElementById(`tab-${t}`);
+    if(el) el.style.display=t===tab?'flex':'none';
+  });
+  // story elements visibility
+  const storyEls=['story-area','choices-area','sq-banner','game-top','game-stat-strip'];
+  storyEls.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=tab==='story'?'':'none'; });
+  // 主畫面底部導覽只在 story tab 顯示
+  const mainNav = document.querySelector('#screen-game > .bottom-nav');
+  if(mainNav) mainNav.style.display = tab==='story' ? '' : 'none';
+  if(tab==='story'){ renderGameScreen(); }
+  if(tab==='quest') renderQuestTab(g);
+  if(tab==='log') renderLogList();
+  if(tab==='char') renderCharList();
+}
+
+/* ════════════════════════════
+   STORY GENERATION
+════════════════════════════ */
+function buildSystemPrompt(g){
+  const chars=g.characters.map(c=>`【${c.name}】職業：${c.role} 關係：${c.relation} 好感：${g.snapshot['好感_'+c.name]||c.affinity}/100 備註：${c.notes}`).join('\n');
+  const snap=Object.entries(g.snapshot).map(([k,v])=>`${k}：${v}`).join('、');
+  const mods=[];
+  if(g.modules.sidequest) mods.push('支線任務系統（可在適當時機提出支線建議，格式：[支線提示]任務名稱|任務描述|預期獎勵）');
+  if(g.modules.combat) mods.push('戰鬥系統');
+  if(g.modules.affinity) mods.push('好感度系統（好感度變化請在段落末標注 [好感變化] 角色名±數值 原因）');
+  return `你是一個互動小說引擎，負責推進以下世界觀的故事。
+
+【世界觀】
+${g.worldview}
+
+【角色設定】
+${chars||'（尚未設定角色）'}
+
+【當前狀態快照】
+${snap||'（尚無狀態）'}
+
+【啟用模組】
+${mods.join('\n')||'（無）'}
+
+【敘事風格規範】
+${g.detectedStyle}
+${g.styleSupp}
+
+【歷史摘要】
+${g.summaries.slice(-3).join('\n---\n')||'（尚無摘要）'}
+
+【輸出格式規範】
+每次輸出包含：
+1. 劇情文字（200-400字）
+2. [選項A] 選項文字
+3. [選項B] 選項文字
+4. [選項C] 選項文字
+5. [選項D] 選項文字（可選）
+選項後若有支線提示，格式：[支線提示]任務名|描述|獎勵說明
+若有好感度變化，格式：[好感變化]角色名±數值|原因
+
+不要輸出其他 meta 資訊，不要說「我是 AI」。`;
+}
+
+async function generateStory(g, playerInput){
+  const storyArea=document.getElementById('story-area');
+  const choicesArea=document.getElementById('choices-area');
+  const loading=document.getElementById('story-loading');
+
+  // show loading
+  loading.style.display='';
+  choicesArea.innerHTML='';
+
+  // build messages
+  const recentHistory=g.history.slice(-20);
+  const messages=[
+    ...recentHistory,
+    {role:'user', parts:[{text: playerInput}]}
+  ];
+
+  try{
+    const raw=await callGeminiChat(buildSystemPrompt(g), messages);
+    g.turnCount=(g.turnCount||0)+1;
+    g.page++;
+    g.history.push({role:'user',parts:[{text:playerInput}]},{role:'model',parts:[{text:raw}]});
+
+    // parse output
+    parseAndRenderStory(raw, g);
+
+    // update meta
+    g.meta=`Ch.${g.chapter} · p.${g.page} · 剛更新`;
+    document.getElementById('game-chapter-tag').textContent=`Ch.${g.chapter.toString().padStart(2,'0')} · p.${g.page.toString().padStart(3,'0')}`;
+    renderStatStrip(g);
+
+    // auto summary check
+    if(g.turnCount % (S.settings.intervalShort||10) === 0) autoSummarize(g, 'short');
+
+    await persist();
+  }catch(e){
+    storyArea.innerHTML=`<div class="story-thinking" style="display:block;color:var(--red)">生成失敗：${esc(e.message||'未知錯誤')}<br><br>請確認 API Key 是否正確。</div>`;
+    choicesArea.innerHTML='';
+  }finally{
+    loading.style.display='none';
+  }
+}
+
+function parseAndRenderStory(raw, g){
+  const storyArea=document.getElementById('story-area');
+  const choicesArea=document.getElementById('choices-area');
+  storyArea.innerHTML='';
+
+  // extract special lines
+  const lines=raw.split('\n');
+  const choices=[];
+  let sqTrigger=null;
+  const affinityChanges=[];
+  const storyLines=[];
+
+  lines.forEach(line=>{
+    const trimmed=line.trim();
+    if(/^\[選項[ABCD]\]/.test(trimmed)){
+      const text=trimmed.replace(/^\[選項[ABCD]\]\s*/,'');
+      if(text) choices.push(text);
+    } else if(trimmed.startsWith('[支線提示]')){
+      const parts=trimmed.replace('[支線提示]','').split('|');
+      sqTrigger={ title:parts[0]||'未知支線', desc:parts[1]||'', reward:parts[2]||'' };
+    } else if(trimmed.startsWith('[好感變化]')){
+      const parts=trimmed.replace('[好感變化]','').split('|');
+      affinityChanges.push({ raw:parts[0]||'', reason:parts[1]||'' });
+    } else {
+      storyLines.push(line);
+    }
+  });
+
+  // apply affinity changes
+  affinityChanges.forEach(a=>{
+    const match=a.raw.match(/^(.+?)([+-]\d+)$/);
+    if(match){
+      const name=match[1].trim(); const delta=parseInt(match[2]);
+      const key=`好感_${name}`;
+      if(key in g.snapshot){ g.snapshot[key]=Math.max(0,Math.min(100,(parseInt(g.snapshot[key])||0)+delta)); }
+    }
+  });
+
+  // render story text
+  const storyText=storyLines.join('\n').trim();
+  if(storyText){
+    // detect neuro-link style (for sci-fi worlds)
+    if(g.worldTags.some(t=>t.includes('未來')||t.includes('科技')||t.includes('哨兵'))){
+      const neuroMatch=storyText.match(/【[^】]+】([^【]*)/s);
+      if(neuroMatch){ /* could render neuro box, simplified here */ }
+    }
+    const div=document.createElement('div'); div.className='story-text';
+    div.innerHTML=storyText.split('\n\n').map(p=>`<p>${esc(p.trim())}</p>`).join('');
+    storyArea.appendChild(div);
+  }
+
+  // scroll to top
+  storyArea.scrollTop=0;
+
+  // render choices
+  choicesArea.innerHTML='';
+  const labels=['A','B','C','D'];
+  choices.forEach((txt,i)=>{
+    const btn=document.createElement('button'); btn.className='choice-btn';
+    btn.innerHTML=`<span class="choice-label">${labels[i]||i+1}</span><span>${esc(txt)}</span>`;
+    btn.onclick=()=>{ disableChoices(); generateStory(g,txt); };
+    choicesArea.appendChild(btn);
+  });
+
+  // custom input toggle
+  const toggleBtn=document.createElement('button'); toggleBtn.className='btn-custom-toggle'; toggleBtn.textContent='✦ 自訂行動';
+  const inputWrap=document.createElement('div'); inputWrap.className='custom-input-wrap';
+  const ta=document.createElement('textarea'); ta.className='custom-input'; ta.rows=1; ta.placeholder='輸入你的行動或對話……';
+  ta.oninput=()=>{ ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; };
+  const sendBtn=document.createElement('button'); sendBtn.className='btn-custom-send'; sendBtn.textContent='↑';
+  sendBtn.onclick=()=>{ const v=ta.value.trim(); if(v){ disableChoices(); generateStory(g,v); } };
+  inputWrap.appendChild(ta); inputWrap.appendChild(sendBtn);
+  toggleBtn.onclick=()=>{ toggleBtn.classList.toggle('open'); inputWrap.classList.toggle('open'); if(inputWrap.classList.contains('open')) ta.focus(); };
+  choicesArea.appendChild(toggleBtn); choicesArea.appendChild(inputWrap);
+
+  // sidequest banner
+  if(sqTrigger && g.modules.sidequest){
+    showSqBanner(sqTrigger, g);
+  }
+
+  // add log entry
+  g.logs.unshift({
+    id: `log_${Date.now()}`,
+    type:'main',
+    page:`p.${(g.page-1).toString().padStart(3,'0')}`,
+    title: storyText.slice(0,30)+'…',
+    meta: new Date().toLocaleDateString('zh-TW'),
+    tags:['main'],
+    summary: storyText.slice(0,120),
+    got:'', lost:''
+  });
+}
+
+function disableChoices(){
+  document.querySelectorAll('.choice-btn').forEach(b=>{ b.disabled=true; b.style.opacity='0.4'; });
+  document.getElementById('story-loading').style.display='';
+}
+
+/* ════════════════════════════
+   SIDEQUEST
+════════════════════════════ */
+function showSqBanner(sq, g){
+  S.rt.pendingSq=sq;
+  const banner=document.getElementById('sq-banner');
+  document.getElementById('sq-banner-title').textContent=sq.title;
+  banner.style.display='flex';
+  if(sq.timed){
+    let secs=sq.timerSecs||300;
+    document.getElementById('sq-banner-timer').textContent=formatTime(secs);
+    if(S.rt.sqTimer) clearInterval(S.rt.sqTimer);
+    S.rt.sqTimer=setInterval(()=>{
+      secs--;
+      if(secs<=0){ clearInterval(S.rt.sqTimer); banner.style.display='none'; S.rt.pendingSq=null; toast('限時支線已失效'); return; }
+      document.getElementById('sq-banner-timer').textContent=formatTime(secs);
+    },1000);
+  } else {
+    document.getElementById('sq-banner-timer').textContent='';
+  }
+}
+
+function showSqModal(){
+  const sq=S.rt.pendingSq; if(!sq) return;
+  const modal=document.getElementById('sq-modal');
+  const badge=document.getElementById('sq-modal-badge');
+  badge.textContent=sq.timed?'⏱ 限時支線':'◇ 支線任務';
+  badge.className='modal-badge '+(sq.timed?'badge-timed':'badge-side');
+  document.getElementById('sq-modal-title').textContent=sq.title;
+  document.getElementById('sq-modal-desc').textContent=sq.desc||'遭遇了新的支線任務。';
+  const timerLine=document.getElementById('sq-modal-timer');
+  timerLine.style.display=sq.timed?'':'none';
+  const rewardEl=document.getElementById('sq-modal-reward');
+  if(sq.reward){ rewardEl.style.display=''; document.getElementById('sq-modal-reward-text').textContent=sq.reward; }
+  else rewardEl.style.display='none';
+  modal.style.display='flex';
+}
+
+function dismissSqModal(){ document.getElementById('sq-modal').style.display='none'; }
+
+function startSidequest(){
+  const g=activeGame(); if(!g||!S.rt.pendingSq) return;
+  dismissSqModal();
+  document.getElementById('sq-banner').style.display='none';
+  if(S.rt.sqTimer){ clearInterval(S.rt.sqTimer); S.rt.sqTimer=null; }
+  // save main state snapshot
+  g.savedMainState={ page:g.page, history:[...g.history], snapshot:{...g.snapshot} };
+  g.mode='side';
+  const sq=S.rt.pendingSq;
+  g.quests.push({id:`q_${Date.now()}`,type:'side',title:sq.title,desc:sq.desc,active:true,timed:false});
+  S.rt.pendingSq=null;
+  toast(`已進入支線：${sq.title}`);
+  generateStory(g, `[開始支線任務：${sq.title}] ${sq.desc}`);
+  renderQuestTab(g);
+}
+
+function returnToMain(){
+  const g=activeGame(); if(!g) return;
+  g.mode='main';
+  goTo('screen-game');
+  renderGameScreen();
+}
+
+/* ════════════════════════════
+   QUEST TAB
+════════════════════════════ */
+function renderQuestTab(g){
+  const list=document.getElementById('quest-active-list'); list.innerHTML='';
+  const active=g.quests.filter(q=>q.active);
+  document.getElementById('quest-sub').textContent=`主線 ${active.filter(q=>q.type==='main').length} 條 · 支線 ${active.filter(q=>q.type!=='main').length} 條`;
+  if(!active.length){ list.innerHTML='<div style="padding:14px 0;font-family:var(--mono);font-size:11px;color:var(--text-dim)">（暫無進行中任務）</div>'; return; }
+  active.forEach(q=>{
+    const card=document.createElement('div');
+    const cls=q.type==='main'?'qmain':q.timed?'qtimed':'qside';
+    const typeLabel=q.type==='main'?'◈ 主線':q.timed?'⏱ 限時支線':'◇ 支線';
+    card.className=`quest-card ${cls}`;
+    card.innerHTML=`<div class="quest-type">${typeLabel}</div><div class="quest-title">${esc(q.title)}</div><div class="quest-desc">${esc(q.desc||'')}</div><div class="quest-footer"><span></span><button class="btn-quest-go" onclick="toast('繼續劇情請切回劇情頁')">詳情 →</button></div>`;
+    list.appendChild(card);
+  });
+}
+
+/* ════════════════════════════
+   LOG TAB
+════════════════════════════ */
+function setLogFilter(f){
+  S.rt.logFilter=f;
+  ['all','main','side'].forEach(x=>{ document.getElementById(`chip-${x}`)?.classList.toggle('active',x===f); });
+  renderLogList();
+}
+
+function renderLogList(){
+  const g=activeGame();
+  const list=document.getElementById('log-list'); list.innerHTML='';
+  const q=document.getElementById('log-search')?.value.toLowerCase()||'';
+  const f=S.rt.logFilter;
+  const logs=(g?.logs||[]).filter(l=>{
+    if(f!=='all'&&l.type!==f) return false;
+    if(q&&!l.title.toLowerCase().includes(q)&&!(l.summary||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  document.getElementById('log-sub').textContent=`${logs.length} 筆記錄`;
+  if(!logs.length){ list.innerHTML='<div style="padding:20px 0;font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:center">（暫無記錄）</div>'; return; }
+  logs.forEach(l=>{
+    const entry=document.createElement('div'); entry.className='log-entry'+(S.rt.openLogId===l.id?' open':'');
+    const tagsHtml=(l.tags||[]).map(t=>`<span class="log-tag tag-${t}">${esc(t)}</span>`).join('');
+    const detailHtml=S.rt.openLogId===l.id?`<div class="log-detail"><div class="detail-label">摘要</div><div class="detail-text">${esc(l.summary||'—')}</div></div>`:'';
+    entry.innerHTML=`<div class="log-page">${esc(l.page||'')}</div><div class="log-title">${esc(l.title)}</div><div class="log-meta">${esc(l.meta||'')}</div><div class="log-tags">${tagsHtml}</div>${detailHtml}`;
+    entry.onclick=()=>{ S.rt.openLogId=S.rt.openLogId===l.id?null:l.id; renderLogList(); };
+    list.appendChild(entry);
+  });
+}
+
+/* ════════════════════════════
+   CHAR TAB
+════════════════════════════ */
+function setCharFilter(f){
+  S.rt.charFilter=f;
+  ['all','ally','threat'].forEach(x=>{ document.getElementById(`chip-char-${x}`)?.classList.toggle('active',x===f); });
+  renderCharList();
+}
+
+function renderCharList(){
+  const g=activeGame();
+  const list=document.getElementById('char-list'); list.innerHTML='';
+  const q=document.getElementById('char-search')?.value.toLowerCase()||'';
+  const f=S.rt.charFilter;
+  const chars=(g?.characters||[]).filter(c=>{
+    if(f==='threat'&&c.relation!=='威脅') return false;
+    if(f==='ally'&&c.relation==='威脅') return false;
+    if(q&&!c.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  document.getElementById('char-sub').textContent=`已認識 ${g?.characters?.length||0} 人`;
+  if(!chars.length){ list.innerHTML='<div style="padding:20px;font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:center">（暫無角色）</div>'; return; }
+  chars.forEach(c=>{
+    const aff=g.snapshot[`好感_${c.name}`]??c.affinity??50;
+    const isThreat=c.relation==='威脅';
+    const card=document.createElement('div'); card.className='char-card';
+    card.innerHTML=`<div class="char-header">
+      <div class="char-avatar">👤</div>
+      <div style="flex:1;min-width:0"><div class="char-name">${esc(c.name)}</div><div class="char-role">${esc(c.role||'')}</div></div>
+      <div class="char-relation-tag ${isThreat?'threat':''}">${esc(c.relation||'未知')}</div>
+    </div>
+    <div class="affinity-row"><span>好感度</span><span>${aff} / 100</span></div>
+    <div class="bar-track"><div class="bar-fill ${isThreat?'threat':''}" style="width:${Math.max(0,Math.min(100,aff))}%"></div></div>
+    ${c.notes?`<div class="char-note">${esc(c.notes)}</div>`:''}`;
+    list.appendChild(card);
+  });
+}
+
+/* ════════════════════════════
+   AUTO SUMMARY
+════════════════════════════ */
+async function autoSummarize(g, type){
+  try{
+    const recentHistory=g.history.slice(-((S.settings.intervalShort||10)*2));
+    const histText=recentHistory.map(m=>(m.role==='user'?'玩家：':'AI：')+(m.parts?.[0]?.text||'')).join('\n');
+    const prompt=(type==='short'?S.settings.promptShort:S.settings.promptDeep)||PROMPT_SHORT;
+    const summary=await callGemini(prompt+'\n\n以下是對話內容：\n'+histText);
+    g.summaries.push(summary);
+    // trim old history (keep last interval's worth)
+    if(g.history.length>(S.settings.intervalShort||10)*4) g.history=g.history.slice(-(S.settings.intervalShort||10)*2);
+    await persist();
+  }catch(e){ /* silent fail */ }
+}
+
+/* ════════════════════════════
+   GEMINI API
+════════════════════════════ */
+async function callGemini(prompt){
+  const model=S.settings.model.startsWith('claude')?'gemini-2.5-flash':S.settings.model;
+  const key=S.settings.geminiKey;
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const res=await fetch(url,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:2048}})
+  });
+  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e?.error?.message||`HTTP ${res.status}`); }
+  const data=await res.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+}
+
+async function callGeminiChat(systemPrompt, messages){
+  const model=S.settings.model.startsWith('claude')?'gemini-2.5-flash-lite':S.settings.model;
+  const key=S.settings.geminiKey;
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const contents=[
+    {role:'user', parts:[{text:'[系統設定]\n'+systemPrompt+'\n\n[開始故事]'}]},
+    {role:'model', parts:[{text:'好的，我已了解所有設定，準備開始推進故事。'}]},
+    ...messages
+  ];
+  const res=await fetch(url,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents, generationConfig:{temperature:0.85,maxOutputTokens:2048}})
+  });
+  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e?.error?.message||`HTTP ${res.status}`); }
+  const data=await res.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+}
+
+/* ════════════════════════════
+   UTIL
+════════════════════════════ */
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatTime(s){ const m=Math.floor(s/60); return `${m.toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
+
+/* ════════════════════════════
+   INIT
+════════════════════════════ */
+(async()=>{
+  await openDB(); await load(); renderHome(); renderSettings(); applyStoredTheme();
+})();
+
+
+/* ════════════════════════════
+   THEME TOGGLE
+════════════════════════════ */
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  // 更新所有主題按鈕圖示
+  document.querySelectorAll('.btn-theme').forEach(btn => {
+    btn.textContent = isLight ? '☀️' : '🌙';
+  });
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+
+function applyStoredTheme() {
+  const t = localStorage.getItem('theme');
+  if (t === 'light') {
+    document.body.classList.add('light');
+    document.querySelectorAll('.btn-theme').forEach(btn => btn.textContent = '☀️');
+  }
+}
+
+/* ════════════════════════════
+   IMPORT WIZARD STATE
+════════════════════════════ */
+let IMP = {
+  name: '', worldview: '', charcard: '', history: '',
+  summary: '', mainQuests: [], sideQuests: [],
+  chars: [], hooks: '', chapter: 1, page: 1,
+};
+
+/* ════════════════════════════
+   IMPORT STEP 1
+════════════════════════════ */
+function impGoStep2() {
+  const name = document.getElementById('imp-game-name').value.trim();
+  const wv   = document.getElementById('imp-worldview').value.trim();
+  if (!name) { toast('請先填入遊戲名稱'); return; }
+  if (wv.length < 10) { toast('請貼入世界觀設定'); return; }
+  IMP.name      = name;
+  IMP.worldview = wv;
+  IMP.charcard  = document.getElementById('imp-charcard').value.trim();
+  goTo('screen-import-step2');
+}
+
+/* ════════════════════════════
+   IMPORT STEP 2 — AI ANALYSIS
+════════════════════════════ */
+async function runImportAnalysis() {
+  const history = document.getElementById('imp-history').value.trim();
+  if (history.length < 30) { toast('請貼入對話記錄或摘要'); return; }
+  if (!S.settings.geminiKey) { toast('請先設定 Gemini API Key'); return; }
+
+  IMP.history = history;
+  const btn = document.getElementById('btn-imp-analyze');
+  btn.innerHTML = '<span class="spinner"></span>AI 分析中…';
+  btn.disabled = true;
+
+  try {
+    const prompt = `你是互動小說存檔分析器。請分析以下對話記錄或摘要，以純 JSON 輸出（不要 markdown、不要說明文字）。
+
+JSON 格式：
+{
+  "summary": "200字以內的當前劇情摘要",
+  "mainQuests": [
+    {"title": "主線事件名稱", "status": "completed|active", "desc": "一句話描述"}
+  ],
+  "sideQuests": [
+    {"title": "支線任務名稱", "status": "completed|active", "desc": "一句話描述"}
+  ],
+  "characters": [
+    {"name": "角色名", "relation": "關係", "affinity": 75, "notes": "當前狀態一句話"}
+  ],
+  "hooks": "當前未解決的伏筆與懸念（100字以內）",
+  "chapter": 2,
+  "page": 26
+}
+
+世界觀背景：
+${IMP.worldview}
+
+${IMP.charcard ? '角色卡：\n' + IMP.charcard + '\n\n' : ''}對話記錄 / 摘要：
+${history.slice(0, 8000)}`;
+
+    const raw = await callGemini(prompt);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    } catch {
+      throw new Error('AI 回傳格式錯誤，請再試一次');
+    }
+
+    IMP.summary    = parsed.summary    || '';
+    IMP.mainQuests = parsed.mainQuests || [];
+    IMP.sideQuests = parsed.sideQuests || [];
+    IMP.chars      = parsed.characters || [];
+    IMP.hooks      = parsed.hooks      || '';
+    IMP.chapter    = parsed.chapter    || 1;
+    IMP.page       = parsed.page       || 1;
+
+    renderImportStep3();
+    goTo('screen-import-step3');
+
+  } catch(e) {
+    const msg = e.message || '';
+    const isQuota = msg.includes('Quota') || msg.includes('429');
+    toast('分析失敗：' + (isQuota ? '免費額度用完，請換模型' : msg || '請確認 API Key'));
+  } finally {
+    btn.innerHTML = 'AI 分析整理 →';
+    btn.disabled = false;
+  }
+}
+
+/* ════════════════════════════
+   IMPORT STEP 3 — RENDER
+════════════════════════════ */
+function renderImportStep3() {
+  document.getElementById('imp-result-summary').value = IMP.summary;
+  document.getElementById('imp-result-hooks').value   = IMP.hooks;
+  document.getElementById('imp-chapter').value        = IMP.chapter;
+  document.getElementById('imp-page').value           = IMP.page;
+  renderImpQuestList();
+  renderImpCharList();
+}
+
+function renderImpQuestList() {
+  renderImpQuests('imp-result-main-list', IMP.mainQuests);
+  renderImpQuests('imp-result-side-list', IMP.sideQuests);
+}
+
+function renderImpQuests(containerId, quests) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  quests.forEach((q, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;align-items:center';
+    const statusColor = q.status === 'completed' ? 'var(--text-muted)' : 'var(--green)';
+    row.innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:${statusColor};flex-shrink:0;width:40px">${q.status==='completed'?'✓ 完成':'▶ 進行'}</div>
+      <input class="input-text" style="flex:1;padding:7px 10px;font-size:11px" value="${esc(q.title)}"
+        oninput="(containerId==='imp-result-main-list'?IMP.mainQuests:IMP.sideQuests)[${i}].title=this.value">
+      <button class="btn-del-field" onclick="delImpQuest('${containerId}',${i})">×</button>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function addImpQuest(type) {
+  if (type === 'main') {
+    IMP.mainQuests.push({ title: '新主線記錄', status: 'completed', desc: '' });
+    renderImpQuests('imp-result-main-list', IMP.mainQuests);
+  } else {
+    IMP.sideQuests.push({ title: '新支線記錄', status: 'completed', desc: '' });
+    renderImpQuests('imp-result-side-list', IMP.sideQuests);
+  }
+}
+
+function delImpQuest(containerId, i) {
+  if (containerId === 'imp-result-main-list') {
+    IMP.mainQuests.splice(i, 1);
+    renderImpQuests('imp-result-main-list', IMP.mainQuests);
+  } else {
+    IMP.sideQuests.splice(i, 1);
+    renderImpQuests('imp-result-side-list', IMP.sideQuests);
+  }
+}
+
+function renderImpCharList() {
+  const c = document.getElementById('imp-result-chars');
+  c.innerHTML = '';
+  IMP.chars.forEach((ch, i) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg-input);border:1px solid var(--border-md);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px';
+    card.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="font-size:13px;color:var(--text-primary);flex:1">${esc(ch.name)}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--accent-light)">${esc(ch.relation||'')}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);width:36px">好感</div>
+        <input type="number" min="0" max="100" value="${ch.affinity||50}"
+          style="width:56px;background:var(--bg-input);border:1px solid var(--border-md);border-radius:6px;padding:5px 8px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;text-align:center;outline:none;"
+          oninput="IMP.chars[${i}].affinity=+this.value">
+        <div style="flex:1;font-family:var(--mono);font-size:10px;color:var(--text-muted)">${esc(ch.notes||'')}</div>
+      </div>
+    `;
+    c.appendChild(card);
+  });
+}
+
+/* ════════════════════════════
+   IMPORT STEP 4
+════════════════════════════ */
+function buildImportSummaryAndGoStep4() {
+  // save edits from step3
+  IMP.summary = document.getElementById('imp-result-summary').value.trim();
+  IMP.hooks   = document.getElementById('imp-result-hooks').value.trim();
+  IMP.chapter = parseInt(document.getElementById('imp-chapter').value) || 1;
+  IMP.page    = parseInt(document.getElementById('imp-page').value) || 1;
+
+  const mainDone  = IMP.mainQuests.filter(q=>q.status==='completed').length;
+  const sideTotal = IMP.sideQuests.length;
+  const sideActive= IMP.sideQuests.filter(q=>q.status==='active').length;
+
+  document.getElementById('imp-summary-box').innerHTML = `
+    <div class="summary-row"><div class="summary-key">遊戲名稱</div><div class="summary-val">${esc(IMP.name)}</div></div>
+    <div class="summary-row"><div class="summary-key">當前進度</div><div class="summary-val">Ch.${IMP.chapter} · p.${IMP.page}</div></div>
+    <div class="summary-row"><div class="summary-key">劇情摘要</div><div class="summary-val" style="color:var(--text-muted);font-size:11px">${esc(IMP.summary.slice(0,100))}…</div></div>
+    <div class="summary-row"><div class="summary-key">主線記錄</div><div class="summary-val">${mainDone} 條已完成</div></div>
+    <div class="summary-row"><div class="summary-key">支線記錄</div><div class="summary-val">${sideTotal} 條（進行中 ${sideActive} 條）</div></div>
+    <div class="summary-row"><div class="summary-key">角色</div><div class="summary-val">${IMP.chars.map(c=>c.name).join('、')||'（未偵測到）'}</div></div>
+    <div class="summary-row"><div class="summary-key">懸念</div><div class="summary-val" style="color:var(--text-muted);font-size:11px">${esc((IMP.hooks||'—').slice(0,80))}</div></div>
+    <div class="summary-row"><div class="summary-key">模型</div><div class="summary-val">${esc(S.settings.model)}</div></div>
+  `;
+  goTo('screen-import-step4');
+}
+
+async function startImportedGame() {
+  if (!S.settings.geminiKey) { toast('請先設定 Gemini API Key'); return; }
+  const btn = document.getElementById('btn-imp-start');
+  btn.innerHTML = '<span class="spinner"></span>匯入中…';
+  btn.disabled = true;
+
+  try {
+    const id = Date.now().toString();
+    // Build log entries from quests
+    const logs = [
+      ...IMP.mainQuests.map((q,i) => ({
+        id: 'imp_main_'+i, type:'main',
+        page: 'p.'+(i+1).toString().padStart(3,'0'),
+        title: q.title, meta:'（匯入記錄）',
+        tags:['main', q.status==='completed'?'event':'event'],
+        summary: q.desc||q.title, got:'', lost:''
+      })),
+      ...IMP.sideQuests.map((q,i) => ({
+        id: 'imp_side_'+i, type:'side',
+        page: 'p.'+(i+1).toString().padStart(3,'0'),
+        title: q.title, meta:'（匯入記錄）',
+        tags:['side', q.status==='completed'?'event':'event'],
+        summary: q.desc||q.title, got:'', lost:''
+      })),
+    ];
+
+    // Build snapshot from chars
+    const snapshot = {};
+    IMP.chars.forEach(c => { if(c.name) snapshot[`好感_${c.name}`] = c.affinity; });
+
+    // Build active quests
+    const quests = [
+      { id:'q_main_imp', type:'main', title:`Ch.${IMP.chapter} 主線`, desc:'（從匯入進度繼續）', active:true, timed:false },
+      ...IMP.sideQuests.filter(q=>q.status==='active').map((q,i)=>({
+        id:'q_side_imp_'+i, type:'side', title:q.title, desc:q.desc||'', active:true, timed:false
+      })),
+    ];
+
+    const extraHint = document.getElementById('imp-extra-hint').value.trim();
+
+    const g = {
+      id, name: IMP.name, icon:'📖',
+      meta: `Ch.${IMP.chapter} · p.${IMP.page} · 匯入存檔`,
+      worldview: IMP.worldview,
+      worldTags: [], fieldTags: [],
+      detectedStyle: '', styleSupp: '',
+      characters: IMP.chars.map(c=>({ name:c.name, role:'', relation:c.relation||'', affinity:c.affinity||50, notes:c.notes||'' })),
+      modules: { sidequest:true, combat:false, affinity:true, money:false },
+      customFields: [],
+      openingHint: extraHint,
+      createdAt: Date.now(),
+      page: IMP.page, chapter: IMP.chapter,
+      summaries: [IMP.summary + (IMP.hooks ? `\n\n【當前伏筆】\n${IMP.hooks}` : '')],
+      history: [], logs, quests, snapshot,
+      turnCount: 0, mode:'main', savedMainState:null,
+    };
+
+    S.games.push(g);
+    S.activeGameId = id;
+    await persist();
+
+    // Reset IMP
+    IMP = { name:'', worldview:'', charcard:'', history:'', summary:'', mainQuests:[], sideQuests:[], chars:[], hooks:'', chapter:1, page:1 };
+
+    S.screenStack = ['screen-home'];
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    goTo('screen-game');
+
+    // 開場提示給 AI
+    const openingMsg = `【匯入存檔，從當前進度繼續】\n\n劇情摘要：${IMP.summary||g.summaries[0]}\n\n${extraHint ? '補充說明：'+extraHint+'\n\n' : ''}請從 Ch.${g.chapter} p.${g.page} 之後繼續推進故事。`;
+    await generateStory(g, openingMsg);
+
+  } catch(e) {
+    toast('匯入失敗：'+(e.message||'未知錯誤'));
+  } finally {
+    btn.innerHTML = '✦ 繼續故事';
+    btn.disabled = false;
+  }
+}
+
+</script>
+
+<!-- ══ IMPORT STEP 1：世界觀 + 角色卡 ══ -->
+<div class="screen" id="screen-import-step1">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot current">1</div><div class="step-line"></div>
+    <div class="step-dot pending">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 01 / 04</div>
+    <div class="step-title">世界觀 + 角色卡</div>
+    <div class="step-desc">貼入世界觀設定和角色卡，讓 AI 了解這個世界的基礎設定。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">遊戲名稱</div>
+      <input class="input-text" id="imp-game-name" placeholder="例：哨兵嚮導 · 帝國白塔篇" maxlength="40">
+    </div>
+    <div>
+      <div class="field-label">世界觀 / 設定文</div>
+      <textarea class="input-textarea" id="imp-worldview" rows="6" placeholder="貼入世界觀設定……"></textarea>
+    </div>
+    <div>
+      <div class="field-label">角色卡（選填）</div>
+      <div class="field-hint">若已有整理好的角色卡可以一起貼，AI 會合併分析。</div>
+      <textarea class="input-textarea" id="imp-charcard" rows="5" placeholder="貼入角色卡……（可留空，Step 3 會從對話記錄自動提取）"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" onclick="impGoStep2()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT STEP 2：貼入對話記錄 ══ -->
+<div class="screen" id="screen-import-step2">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 02 / 04</div>
+    <div class="step-title">貼入對話記錄</div>
+    <div class="step-desc">貼入現有的對話記錄、時空膠囊摘要、或記憶關鍵段落，格式不限。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="import-note">
+      ✦ 可接受的格式：<br>
+      · Gemini / ChatGPT 原始對話記錄<br>
+      · 時空膠囊摘要文字<br>
+      · 記憶關鍵段落整理<br>
+      · 以上混合貼入都沒問題
+    </div>
+    <div>
+      <div class="field-label">對話記錄 / 摘要</div>
+      <div class="field-hint">建議貼入最近 20-30 頁的內容，太長可以只貼時空膠囊摘要。</div>
+      <textarea class="input-textarea" id="imp-history" rows="14" placeholder="貼入你的對話記錄或摘要……&#10;&#10;例：&#10;P.021 — P.026 名單、總區突破……&#10;或直接貼 Gemini 的對話內容……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-imp-analyze" onclick="runImportAnalysis()">AI 分析整理 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT STEP 3：確認分析結果 ══ -->
+<div class="screen" id="screen-import-step3">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 03 / 04</div>
+    <div class="step-title">確認分析結果</div>
+    <div class="step-desc">AI 整理出以下內容，確認或微調後繼續。</div>
+  </div>
+  <div class="scroll-body" style="gap:16px">
+
+    <div class="section">
+      <div class="section-header">▸ 劇情摘要</div>
+      <textarea class="input-textarea" id="imp-result-summary" rows="5"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 已完成的主線</div>
+      <div id="imp-result-main-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn-add-field" style="margin-top:6px" onclick="addImpQuest('main')">＋ 新增主線記錄</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 已完成 / 進行中的支線</div>
+      <div id="imp-result-side-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn-add-field" style="margin-top:6px" onclick="addImpQuest('side')">＋ 新增支線記錄</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 角色狀態</div>
+      <div id="imp-result-chars" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 當前伏筆與懸念</div>
+      <textarea class="input-textarea" id="imp-result-hooks" rows="4"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 當前進度</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+          <div class="field-label">章節</div>
+          <input class="input-text" id="imp-chapter" type="number" min="1" value="1" style="padding:8px 12px">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+          <div class="field-label">頁碼</div>
+          <input class="input-text" id="imp-page" type="number" min="1" value="1" style="padding:8px 12px">
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 返回</button>
+    <button class="btn-primary" onclick="buildImportSummaryAndGoStep4()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT STEP 4：確認開始 ══ -->
+<div class="screen" id="screen-import-step4">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 04 / 04</div>
+    <div class="step-title">確認並繼續</div>
+    <div class="step-desc">匯入完成，確認後從當前進度繼續故事。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="summary-box" id="imp-summary-box"></div>
+    <div>
+      <div class="field-label">給 AI 的補充說明（選填）</div>
+      <div class="field-hint">有什麼特別要交代的，例如「下一步要去找副處長」。</div>
+      <textarea class="input-textarea" id="imp-extra-hint" rows="3" placeholder="例：下一幕從雷恩拿到名單之後繼續，海寧剛發現軍部 IP……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-imp-start" onclick="startImportedGame()">✦ 繼續故事</button>
+  </div>
+</div>
+
+</body>
+</html>
