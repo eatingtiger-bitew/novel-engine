@@ -195,7 +195,7 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
 .sq-timer{font-family:var(--mono);font-size:10px;color:var(--amber);flex-shrink:0;}
 
 /* story */
-.story-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 10px;scrollbar-width:none;}
+.story-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 18px 0;scrollbar-width:none;}
 .story-area::-webkit-scrollbar{display:none;}
 .neuro-box{background:#0d0d1f;border:1px solid #2233aa44;border-left:2px solid #4455cc;border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:#5566bb;line-height:1.7;}
 .neuro-header{color:#7788dd;font-size:9px;letter-spacing:.15em;margin-bottom:6px;}
@@ -205,7 +205,7 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
 .story-thinking{font-family:var(--mono);font-size:11px;color:var(--text-muted);line-height:1.6;padding:8px 12px;background:#0a0a18;border-radius:6px;margin:10px 0;}
 
 /* choices */
-.choices-area{padding:10px 16px 12px;display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--border);flex-shrink:0;}
+.choices-area{padding:10px 0 24px;display:flex;flex-direction:column;gap:7px;}
 .choice-btn{width:100%;padding:11px 14px;background:var(--bg-card);border:1px solid var(--border-md);border-radius:10px;color:#c8c4dc;font-family:var(--serif);font-size:13px;line-height:1.5;text-align:left;cursor:pointer;display:flex;align-items:flex-start;gap:10px;transition:background .15s,border-color .15s;-webkit-appearance:none;}
 .choice-btn:active{background:var(--bg-hover);border-color:var(--border-hi);}
 .choice-label{font-family:var(--mono);font-size:10px;color:#5566aa;letter-spacing:.1em;padding-top:2px;flex-shrink:0;}
@@ -411,7 +411,7 @@ body.light #toast { background:#ffffff; border-color:#c0bbb0; color:#2a2a40; }
   <div class="home-list-label" id="home-list-label">▸ 進行中的遊戲</div>
   <div class="game-list" id="game-list"></div>
   <div class="home-actions">
-    <button class="btn-new-game" onclick="goTo('screen-new-step1')">✦ 新遊戲</button>
+    <button class="btn-new-game" onclick="resetNewGame();goTo('screen-new-step1')">✦ 新遊戲</button>
     <button class="btn-new-game" style="background:#1a2a1e;border-color:#44aa66;color:#a0ddb0;margin-top:0" onclick="goTo('screen-import-step1')">⬡ 匯入存檔</button>
     <button class="btn-settings-link" onclick="goTo('screen-settings')">⚙ 設定 · API 金鑰</button>
   </div>
@@ -739,10 +739,9 @@ body.light #toast { background:#ffffff; border-color:#c0bbb0; color:#2a2a40; }
     <div class="story-thinking" id="story-loading" style="display:none">
       <span class="spinner"></span>故事生成中……
     </div>
-  </div>
-  <!-- choices -->
-  <div class="choices-area" id="choices-area">
-    <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:center;padding:8px 0;">等待劇情生成…</div>
+    <div class="choices-area" id="choices-area" style="padding:10px 0 120px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:center;padding:8px 0;">等待劇情生成…</div>
+    </div>
   </div>
   <!-- bottom nav -->
   <div class="bottom-nav">
@@ -1062,7 +1061,10 @@ worldTags：3-5個世界觀類型標籤。fieldTags：3-6個建議狀態欄位�
     );
     let p; try{ p=JSON.parse(res.replace(/```json|```/g,'').trim()); }catch{ throw new Error('AI 回傳格式錯誤'); }
     S.newGame.worldTags=p.worldTags||[]; S.newGame.fieldTags=p.fieldTags||[]; S.newGame.detectedStyle=p.style||'';
-    renderStep2(); goTo('screen-new-step2');
+    renderStep2();
+    // 自動把 fieldTags 帶入 customFields 預填
+    S.newGame.customFields = S.newGame.fieldTags.map(f => ({ name: f, value: '100' }));
+    goTo('screen-new-step2');
   }catch(e){ const msg = e.message||'';
     const isQuota = msg.includes('Quota') || msg.includes('quota') || msg.includes('429');
     const isKey = msg.includes('API_KEY') || msg.includes('invalid') || msg.includes('401');
@@ -1172,6 +1174,7 @@ function buildSummaryAndGoStep5(){
 
 async function startGame(){
   if(!S.settings.geminiKey){ toast('請先設定 Gemini API Key'); return; }
+  if(!S.newGame.name){ toast('遊戲名稱不能為空'); return; }
   const btn=document.getElementById('btn-start-game');
   btn.innerHTML='<span class="spinner"></span>建立中…'; btn.disabled=true;
   try{
@@ -1204,6 +1207,13 @@ async function startGame(){
     await persist();
     // reset wizard
     S.newGame={name:'',worldview:'',worldTags:[],fieldTags:[],detectedStyle:'',styleSupp:'',characters:[],modules:{sidequest:true,combat:false,affinity:true,money:false},customFields:[]};
+    // 清空所有 wizard 輸入欄
+    ['new-game-name','new-game-worldview','charcard-input','style-supplement','opening-hint'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    document.getElementById('parsed-chars-area').style.display='none';
+    document.getElementById('parsed-chars-list').innerHTML='';
+    document.getElementById('custom-fields-list').innerHTML='';
     S.screenStack=['screen-home'];
     document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
     goTo('screen-game');
@@ -1418,8 +1428,8 @@ function parseAndRenderStory(raw, g){
     storyArea.appendChild(div);
   }
 
-  // scroll to top
-  storyArea.scrollTop=0;
+  // scroll to bottom so choices are visible
+  setTimeout(()=>{ storyArea.scrollTop = storyArea.scrollHeight; }, 100);
 
   // render choices
   choicesArea.innerHTML='';
@@ -1682,6 +1692,25 @@ function formatTime(s){ const m=Math.floor(s/60); return `${m.toString().padStar
 /* ════════════════════════════
    HOME NAVIGATION
 ════════════════════════════ */
+function resetNewGame() {
+  S.newGame = {name:'',worldview:'',worldTags:[],fieldTags:[],detectedStyle:'',styleSupp:'',characters:[],modules:{sidequest:true,combat:false,affinity:true,money:false},customFields:[]};
+  ['new-game-name','new-game-worldview','charcard-input','style-supplement','opening-hint'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const pca=document.getElementById('parsed-chars-area'); if(pca) pca.style.display='none';
+  const pcl=document.getElementById('parsed-chars-list'); if(pcl) pcl.innerHTML='';
+  const cfl=document.getElementById('custom-fields-list'); if(cfl) cfl.innerHTML='';
+  // reset toggles back to default
+  const toggleMap={
+    'toggle-sidequest':true,'toggle-combat':false,
+    'toggle-affinity':true,'toggle-money':false
+  };
+  Object.entries(toggleMap).forEach(([id,on])=>{
+    const el=document.getElementById(id);
+    if(el){ el.classList.toggle('on',on); el.classList.toggle('off',!on); }
+  });
+}
+
 function goToHome() {
   if (!confirm('確定回到首頁？當前遊戲進度已自動儲存。')) return;
   S.screenStack = ['screen-home'];
