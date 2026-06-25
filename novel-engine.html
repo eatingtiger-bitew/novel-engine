@@ -326,6 +326,75 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
 .btn-modal-primary:active{background:#2a2448;}
 .btn-modal-secondary{padding:12px 16px;background:var(--bg-card);border:1px solid var(--border-md);border-radius:10px;color:#55558a;font-family:var(--mono);font-size:11px;cursor:pointer;white-space:nowrap;-webkit-appearance:none;}
 .btn-modal-secondary:active{opacity:.7;}
+
+/* ── LIGHT MODE ── */
+body.light {
+  --bg:#f5f3ee; --bg-card:#ffffff; --bg-input:#f0ede8; --bg-hover:#e8e4dc;
+  --border:#d8d4cc; --border-md:#c0bbb0; --border-hi:#5544aa;
+  --text-primary:#1a1a2e; --text-secondary:#2a2a40; --text-muted:#5a5870; --text-dim:#9a98b0;
+  --accent:#5544aa; --accent-light:#7766cc;
+  --green:#2a8a50; --amber:#aa7722; --red:#cc3344;
+}
+body.light .neuro-box { background:#eeeaf8; border-color:#c0b8e8; border-left-color:#7766cc; color:#5544aa; }
+body.light .neuro-header { color:#7766cc; }
+body.light .story-text { color:#2a2a40; }
+body.light .story-dialogue { color:#1a1a2e; border-left-color:#9988cc; }
+body.light .story-thinking { background:#eeeaf8; color:#5a5870; }
+body.light .choice-btn { background:#f0ede8; border-color:#c0bbb0; color:#2a2a40; }
+body.light .choice-btn:active { background:#e0dcd8; }
+body.light .choice-label { color:#7766cc; }
+body.light .btn-custom-toggle { background:#f0ede8; border-color:#c0bbb0; color:#7766cc; }
+body.light .custom-input { background:#f0ede8; border-color:#c0bbb0; color:#2a2a40; }
+body.light .game-card { background:#ffffff; border-color:#d8d4cc; }
+body.light .game-card:active { background:#f0ede8; }
+body.light .log-entry { background:#ffffff; border-color:#d8d4cc; }
+body.light .log-entry.open { background:#f0ede8; border-color:#7766cc; }
+body.light .char-card { background:#ffffff; border-color:#d8d4cc; }
+body.light .quest-card.qmain { background:#eeeaf8; border-color:#9988cc; }
+body.light .quest-card.qside { background:#e8f4ec; border-color:#44aa66; }
+body.light .quest-card.qtimed { background:#fdf0e8; border-color:#cc9944; }
+body.light .analyze-box { background:#eeeaf8; border-color:#c0b8e8; }
+body.light .summary-box { background:#eeeaf8; border-color:#c0b8e8; }
+body.light .prompt-block { background:#f0ede8; border-color:#d8d4cc; }
+body.light .prompt-preview { color:#9a98b0; }
+body.light .char-block { background:#f0ede8; border-color:#d8d4cc; }
+body.light .modal-sheet { background:#ffffff; border-color:#c0bbb0; }
+body.light .modal-reward { background:#f0ede8; border-color:#d8d4cc; }
+body.light .sq-banner { background:#e8f4ec; border-color:#44aa66; }
+body.light .bottom-nav { background:#ffffff; border-top-color:#d8d4cc; }
+body.light .input-text,body.light .input-textarea,body.light .api-input,
+body.light .input-number,body.light .input-field-name,body.light .input-field-val,
+body.light .search-input,body.light .char-input,body.light .char-input-sm { background:#f0ede8; border-color:#c0bbb0; color:#2a2a40; }
+body.light .model-chip { background:#f0ede8; border-color:#c0bbb0; color:#5a5870; }
+body.light .model-chip.active { background:#eeeaf8; border-color:#7766cc; color:#5544aa; }
+body.light .filter-chip { background:#f0ede8; border-color:#c0bbb0; color:#5a5870; }
+body.light .filter-chip.active { background:#eeeaf8; border-color:#7766cc; color:#5544aa; }
+body.light .bar-track { background:#d8d4cc; }
+body.light .toggle-switch.off { background:#d8d4cc; }
+body.light #toast { background:#ffffff; border-color:#c0bbb0; color:#2a2a40; }
+
+/* ── THEME TOGGLE BTN ── */
+.btn-theme {
+  width:30px; height:30px; border-radius:8px;
+  background:var(--bg-card); border:1px solid var(--border-md);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; cursor:pointer; -webkit-appearance:none;
+  transition:background .15s;
+}
+.btn-theme:active { opacity:.6; }
+
+/* ── IMPORT SCREEN ── */
+.import-note {
+  background:var(--bg-input);
+  border:1px solid var(--border-md);
+  border-radius:var(--rs);
+  padding:11px 13px;
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--text-muted);
+  line-height:1.7;
+}
+
 </style>
 </head>
 <body>
@@ -333,6 +402,7 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
 
 <!-- ══ HOME ══ -->
 <div class="screen active" id="screen-home">
+  <div style="position:absolute;top:52px;right:18px;z-index:10"><button class="btn-theme" id="btn-theme" onclick="toggleTheme()" title="切換深色/亮色">🌙</button></div>
   <div class="hero">
     <div class="hero-eyebrow">Interactive Novel Engine</div>
     <div class="hero-title">故事引擎</div>
@@ -342,6 +412,7 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
   <div class="game-list" id="game-list"></div>
   <div class="home-actions">
     <button class="btn-new-game" onclick="goTo('screen-new-step1')">✦ 新遊戲</button>
+    <button class="btn-new-game" style="background:#1a2a1e;border-color:#44aa66;color:#a0ddb0;margin-top:0" onclick="goTo('screen-import-step1')">⬡ 匯入存檔</button>
     <button class="btn-settings-link" onclick="goTo('screen-settings')">⚙ 設定 · API 金鑰</button>
   </div>
 </div>
@@ -646,7 +717,7 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
   <!-- top -->
   <div class="game-top">
     <div class="chapter-tag" id="game-chapter-tag">Ch.01 · p.001</div>
-    <button class="btn-gear" onclick="goTo('screen-settings')">⚙</button>
+    <div style="display:flex;gap:8px"><button class="btn-theme" onclick="toggleTheme()">🌙</button><button class="btn-gear" onclick="goTo('screen-settings')">⚙</button></div>
   </div>
   <!-- stat strip -->
   <div class="stat-strip" id="game-stat-strip"></div>
@@ -678,7 +749,7 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
   </div>
 
   <!-- QUEST TAB -->
-  <div class="tab-page" id="tab-quest" style="display:none;position:absolute;left:0;right:0;top:0;bottom:60px;background:var(--bg);overflow:hidden;flex-direction:column;">
+  <div class="tab-page" id="tab-quest" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
     <div class="tab-header">
       <div class="tab-title">任務</div>
       <div class="tab-sub" id="quest-sub">主線 1 條 · 支線 0 條</div>
@@ -688,10 +759,16 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
       <div class="quest-list" id="quest-active-list"></div>
       <div class="tab-divider"></div>
     </div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab active" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
   </div>
 
   <!-- LOG TAB -->
-  <div class="tab-page" id="tab-log" style="display:none;position:absolute;left:0;right:0;top:0;bottom:60px;background:var(--bg);overflow:hidden;flex-direction:column;">
+  <div class="tab-page" id="tab-log" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
     <div class="tab-header">
       <div class="tab-title">日誌</div>
       <div class="tab-sub" id="log-sub">歷史紀錄</div>
@@ -703,10 +780,16 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
       <button class="filter-chip" id="chip-side" onclick="setLogFilter('side')">支線</button>
     </div>
     <div class="log-list" id="log-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab active" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
   </div>
 
   <!-- CHAR TAB -->
-  <div class="tab-page" id="tab-char" style="display:none;position:absolute;left:0;right:0;top:0;bottom:60px;background:var(--bg);overflow:hidden;flex-direction:column;">
+  <div class="tab-page" id="tab-char" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
     <div class="tab-header">
       <div class="tab-title">角色面板</div>
       <div class="tab-sub" id="char-sub">已認識 0 人</div>
@@ -718,6 +801,12 @@ html,body{height:100%;background:var(--bg);color:var(--text-primary);font-family
       <button class="filter-chip" id="chip-char-threat" onclick="setCharFilter('threat')">威脅</button>
     </div>
     <div class="char-list" id="char-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab active" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
   </div>
 
   <!-- SQ MODAL -->
@@ -1158,6 +1247,9 @@ function switchTab(tab){
   // story elements visibility
   const storyEls=['story-area','choices-area','sq-banner','game-top','game-stat-strip'];
   storyEls.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display=tab==='story'?'':'none'; });
+  // 主畫面底部導覽只在 story tab 顯示
+  const mainNav = document.querySelector('#screen-game > .bottom-nav');
+  if(mainNav) mainNav.style.display = tab==='story' ? '' : 'none';
   if(tab==='story'){ renderGameScreen(); }
   if(tab==='quest') renderQuestTab(g);
   if(tab==='log') renderLogList();
@@ -1558,8 +1650,482 @@ function formatTime(s){ const m=Math.floor(s/60); return `${m.toString().padStar
    INIT
 ════════════════════════════ */
 (async()=>{
-  await openDB(); await load(); renderHome(); renderSettings();
+  await openDB(); await load(); renderHome(); renderSettings(); applyStoredTheme();
 })();
+
+
+/* ════════════════════════════
+   THEME TOGGLE
+════════════════════════════ */
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  // 更新所有主題按鈕圖示
+  document.querySelectorAll('.btn-theme').forEach(btn => {
+    btn.textContent = isLight ? '☀️' : '🌙';
+  });
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+
+function applyStoredTheme() {
+  const t = localStorage.getItem('theme');
+  if (t === 'light') {
+    document.body.classList.add('light');
+    document.querySelectorAll('.btn-theme').forEach(btn => btn.textContent = '☀️');
+  }
+}
+
+/* ════════════════════════════
+   IMPORT WIZARD STATE
+════════════════════════════ */
+let IMP = {
+  name: '', worldview: '', charcard: '', history: '',
+  summary: '', mainQuests: [], sideQuests: [],
+  chars: [], hooks: '', chapter: 1, page: 1,
+};
+
+/* ════════════════════════════
+   IMPORT STEP 1
+════════════════════════════ */
+function impGoStep2() {
+  const name = document.getElementById('imp-game-name').value.trim();
+  const wv   = document.getElementById('imp-worldview').value.trim();
+  if (!name) { toast('請先填入遊戲名稱'); return; }
+  if (wv.length < 10) { toast('請貼入世界觀設定'); return; }
+  IMP.name      = name;
+  IMP.worldview = wv;
+  IMP.charcard  = document.getElementById('imp-charcard').value.trim();
+  goTo('screen-import-step2');
+}
+
+/* ════════════════════════════
+   IMPORT STEP 2 — AI ANALYSIS
+════════════════════════════ */
+async function runImportAnalysis() {
+  const history = document.getElementById('imp-history').value.trim();
+  if (history.length < 30) { toast('請貼入對話記錄或摘要'); return; }
+  if (!S.settings.geminiKey) { toast('請先設定 Gemini API Key'); return; }
+
+  IMP.history = history;
+  const btn = document.getElementById('btn-imp-analyze');
+  btn.innerHTML = '<span class="spinner"></span>AI 分析中…';
+  btn.disabled = true;
+
+  try {
+    const prompt = `你是互動小說存檔分析器。請分析以下對話記錄或摘要，以純 JSON 輸出（不要 markdown、不要說明文字）。
+
+JSON 格式：
+{
+  "summary": "200字以內的當前劇情摘要",
+  "mainQuests": [
+    {"title": "主線事件名稱", "status": "completed|active", "desc": "一句話描述"}
+  ],
+  "sideQuests": [
+    {"title": "支線任務名稱", "status": "completed|active", "desc": "一句話描述"}
+  ],
+  "characters": [
+    {"name": "角色名", "relation": "關係", "affinity": 75, "notes": "當前狀態一句話"}
+  ],
+  "hooks": "當前未解決的伏筆與懸念（100字以內）",
+  "chapter": 2,
+  "page": 26
+}
+
+世界觀背景：
+${IMP.worldview}
+
+${IMP.charcard ? '角色卡：\n' + IMP.charcard + '\n\n' : ''}對話記錄 / 摘要：
+${history.slice(0, 8000)}`;
+
+    const raw = await callGemini(prompt);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    } catch {
+      throw new Error('AI 回傳格式錯誤，請再試一次');
+    }
+
+    IMP.summary    = parsed.summary    || '';
+    IMP.mainQuests = parsed.mainQuests || [];
+    IMP.sideQuests = parsed.sideQuests || [];
+    IMP.chars      = parsed.characters || [];
+    IMP.hooks      = parsed.hooks      || '';
+    IMP.chapter    = parsed.chapter    || 1;
+    IMP.page       = parsed.page       || 1;
+
+    renderImportStep3();
+    goTo('screen-import-step3');
+
+  } catch(e) {
+    const msg = e.message || '';
+    const isQuota = msg.includes('Quota') || msg.includes('429');
+    toast('分析失敗：' + (isQuota ? '免費額度用完，請換模型' : msg || '請確認 API Key'));
+  } finally {
+    btn.innerHTML = 'AI 分析整理 →';
+    btn.disabled = false;
+  }
+}
+
+/* ════════════════════════════
+   IMPORT STEP 3 — RENDER
+════════════════════════════ */
+function renderImportStep3() {
+  document.getElementById('imp-result-summary').value = IMP.summary;
+  document.getElementById('imp-result-hooks').value   = IMP.hooks;
+  document.getElementById('imp-chapter').value        = IMP.chapter;
+  document.getElementById('imp-page').value           = IMP.page;
+  renderImpQuestList();
+  renderImpCharList();
+}
+
+function renderImpQuestList() {
+  renderImpQuests('imp-result-main-list', IMP.mainQuests);
+  renderImpQuests('imp-result-side-list', IMP.sideQuests);
+}
+
+function renderImpQuests(containerId, quests) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  quests.forEach((q, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;align-items:center';
+    const statusColor = q.status === 'completed' ? 'var(--text-muted)' : 'var(--green)';
+    row.innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:${statusColor};flex-shrink:0;width:40px">${q.status==='completed'?'✓ 完成':'▶ 進行'}</div>
+      <input class="input-text" style="flex:1;padding:7px 10px;font-size:11px" value="${esc(q.title)}"
+        oninput="(containerId==='imp-result-main-list'?IMP.mainQuests:IMP.sideQuests)[${i}].title=this.value">
+      <button class="btn-del-field" onclick="delImpQuest('${containerId}',${i})">×</button>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function addImpQuest(type) {
+  if (type === 'main') {
+    IMP.mainQuests.push({ title: '新主線記錄', status: 'completed', desc: '' });
+    renderImpQuests('imp-result-main-list', IMP.mainQuests);
+  } else {
+    IMP.sideQuests.push({ title: '新支線記錄', status: 'completed', desc: '' });
+    renderImpQuests('imp-result-side-list', IMP.sideQuests);
+  }
+}
+
+function delImpQuest(containerId, i) {
+  if (containerId === 'imp-result-main-list') {
+    IMP.mainQuests.splice(i, 1);
+    renderImpQuests('imp-result-main-list', IMP.mainQuests);
+  } else {
+    IMP.sideQuests.splice(i, 1);
+    renderImpQuests('imp-result-side-list', IMP.sideQuests);
+  }
+}
+
+function renderImpCharList() {
+  const c = document.getElementById('imp-result-chars');
+  c.innerHTML = '';
+  IMP.chars.forEach((ch, i) => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg-input);border:1px solid var(--border-md);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px';
+    card.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="font-size:13px;color:var(--text-primary);flex:1">${esc(ch.name)}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--accent-light)">${esc(ch.relation||'')}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);width:36px">好感</div>
+        <input type="number" min="0" max="100" value="${ch.affinity||50}"
+          style="width:56px;background:var(--bg-input);border:1px solid var(--border-md);border-radius:6px;padding:5px 8px;color:var(--text-secondary);font-family:var(--mono);font-size:11px;text-align:center;outline:none;"
+          oninput="IMP.chars[${i}].affinity=+this.value">
+        <div style="flex:1;font-family:var(--mono);font-size:10px;color:var(--text-muted)">${esc(ch.notes||'')}</div>
+      </div>
+    `;
+    c.appendChild(card);
+  });
+}
+
+/* ════════════════════════════
+   IMPORT STEP 4
+════════════════════════════ */
+function buildImportSummaryAndGoStep4() {
+  // save edits from step3
+  IMP.summary = document.getElementById('imp-result-summary').value.trim();
+  IMP.hooks   = document.getElementById('imp-result-hooks').value.trim();
+  IMP.chapter = parseInt(document.getElementById('imp-chapter').value) || 1;
+  IMP.page    = parseInt(document.getElementById('imp-page').value) || 1;
+
+  const mainDone  = IMP.mainQuests.filter(q=>q.status==='completed').length;
+  const sideTotal = IMP.sideQuests.length;
+  const sideActive= IMP.sideQuests.filter(q=>q.status==='active').length;
+
+  document.getElementById('imp-summary-box').innerHTML = `
+    <div class="summary-row"><div class="summary-key">遊戲名稱</div><div class="summary-val">${esc(IMP.name)}</div></div>
+    <div class="summary-row"><div class="summary-key">當前進度</div><div class="summary-val">Ch.${IMP.chapter} · p.${IMP.page}</div></div>
+    <div class="summary-row"><div class="summary-key">劇情摘要</div><div class="summary-val" style="color:var(--text-muted);font-size:11px">${esc(IMP.summary.slice(0,100))}…</div></div>
+    <div class="summary-row"><div class="summary-key">主線記錄</div><div class="summary-val">${mainDone} 條已完成</div></div>
+    <div class="summary-row"><div class="summary-key">支線記錄</div><div class="summary-val">${sideTotal} 條（進行中 ${sideActive} 條）</div></div>
+    <div class="summary-row"><div class="summary-key">角色</div><div class="summary-val">${IMP.chars.map(c=>c.name).join('、')||'（未偵測到）'}</div></div>
+    <div class="summary-row"><div class="summary-key">懸念</div><div class="summary-val" style="color:var(--text-muted);font-size:11px">${esc((IMP.hooks||'—').slice(0,80))}</div></div>
+    <div class="summary-row"><div class="summary-key">模型</div><div class="summary-val">${esc(S.settings.model)}</div></div>
+  `;
+  goTo('screen-import-step4');
+}
+
+async function startImportedGame() {
+  if (!S.settings.geminiKey) { toast('請先設定 Gemini API Key'); return; }
+  const btn = document.getElementById('btn-imp-start');
+  btn.innerHTML = '<span class="spinner"></span>匯入中…';
+  btn.disabled = true;
+
+  try {
+    const id = Date.now().toString();
+    // Build log entries from quests
+    const logs = [
+      ...IMP.mainQuests.map((q,i) => ({
+        id: 'imp_main_'+i, type:'main',
+        page: 'p.'+(i+1).toString().padStart(3,'0'),
+        title: q.title, meta:'（匯入記錄）',
+        tags:['main', q.status==='completed'?'event':'event'],
+        summary: q.desc||q.title, got:'', lost:''
+      })),
+      ...IMP.sideQuests.map((q,i) => ({
+        id: 'imp_side_'+i, type:'side',
+        page: 'p.'+(i+1).toString().padStart(3,'0'),
+        title: q.title, meta:'（匯入記錄）',
+        tags:['side', q.status==='completed'?'event':'event'],
+        summary: q.desc||q.title, got:'', lost:''
+      })),
+    ];
+
+    // Build snapshot from chars
+    const snapshot = {};
+    IMP.chars.forEach(c => { if(c.name) snapshot[`好感_${c.name}`] = c.affinity; });
+
+    // Build active quests
+    const quests = [
+      { id:'q_main_imp', type:'main', title:`Ch.${IMP.chapter} 主線`, desc:'（從匯入進度繼續）', active:true, timed:false },
+      ...IMP.sideQuests.filter(q=>q.status==='active').map((q,i)=>({
+        id:'q_side_imp_'+i, type:'side', title:q.title, desc:q.desc||'', active:true, timed:false
+      })),
+    ];
+
+    const extraHint = document.getElementById('imp-extra-hint').value.trim();
+
+    const g = {
+      id, name: IMP.name, icon:'📖',
+      meta: `Ch.${IMP.chapter} · p.${IMP.page} · 匯入存檔`,
+      worldview: IMP.worldview,
+      worldTags: [], fieldTags: [],
+      detectedStyle: '', styleSupp: '',
+      characters: IMP.chars.map(c=>({ name:c.name, role:'', relation:c.relation||'', affinity:c.affinity||50, notes:c.notes||'' })),
+      modules: { sidequest:true, combat:false, affinity:true, money:false },
+      customFields: [],
+      openingHint: extraHint,
+      createdAt: Date.now(),
+      page: IMP.page, chapter: IMP.chapter,
+      summaries: [IMP.summary + (IMP.hooks ? `\n\n【當前伏筆】\n${IMP.hooks}` : '')],
+      history: [], logs, quests, snapshot,
+      turnCount: 0, mode:'main', savedMainState:null,
+    };
+
+    S.games.push(g);
+    S.activeGameId = id;
+    await persist();
+
+    // Reset IMP
+    IMP = { name:'', worldview:'', charcard:'', history:'', summary:'', mainQuests:[], sideQuests:[], chars:[], hooks:'', chapter:1, page:1 };
+
+    S.screenStack = ['screen-home'];
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    goTo('screen-game');
+
+    // 開場提示給 AI
+    const openingMsg = `【匯入存檔，從當前進度繼續】\n\n劇情摘要：${IMP.summary||g.summaries[0]}\n\n${extraHint ? '補充說明：'+extraHint+'\n\n' : ''}請從 Ch.${g.chapter} p.${g.page} 之後繼續推進故事。`;
+    await generateStory(g, openingMsg);
+
+  } catch(e) {
+    toast('匯入失敗：'+(e.message||'未知錯誤'));
+  } finally {
+    btn.innerHTML = '✦ 繼續故事';
+    btn.disabled = false;
+  }
+}
+
 </script>
+
+<!-- ══ IMPORT STEP 1：世界觀 + 角色卡 ══ -->
+<div class="screen" id="screen-import-step1">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot current">1</div><div class="step-line"></div>
+    <div class="step-dot pending">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 01 / 04</div>
+    <div class="step-title">世界觀 + 角色卡</div>
+    <div class="step-desc">貼入世界觀設定和角色卡，讓 AI 了解這個世界的基礎設定。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">遊戲名稱</div>
+      <input class="input-text" id="imp-game-name" placeholder="例：哨兵嚮導 · 帝國白塔篇" maxlength="40">
+    </div>
+    <div>
+      <div class="field-label">世界觀 / 設定文</div>
+      <textarea class="input-textarea" id="imp-worldview" rows="6" placeholder="貼入世界觀設定……"></textarea>
+    </div>
+    <div>
+      <div class="field-label">角色卡（選填）</div>
+      <div class="field-hint">若已有整理好的角色卡可以一起貼，AI 會合併分析。</div>
+      <textarea class="input-textarea" id="imp-charcard" rows="5" placeholder="貼入角色卡……（可留空，Step 3 會從對話記錄自動提取）"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" onclick="impGoStep2()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT STEP 2：貼入對話記錄 ══ -->
+<div class="screen" id="screen-import-step2">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 02 / 04</div>
+    <div class="step-title">貼入對話記錄</div>
+    <div class="step-desc">貼入現有的對話記錄、時空膠囊摘要、或記憶關鍵段落，格式不限。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="import-note">
+      ✦ 可接受的格式：<br>
+      · Gemini / ChatGPT 原始對話記錄<br>
+      · 時空膠囊摘要文字<br>
+      · 記憶關鍵段落整理<br>
+      · 以上混合貼入都沒問題
+    </div>
+    <div>
+      <div class="field-label">對話記錄 / 摘要</div>
+      <div class="field-hint">建議貼入最近 20-30 頁的內容，太長可以只貼時空膠囊摘要。</div>
+      <textarea class="input-textarea" id="imp-history" rows="14" placeholder="貼入你的對話記錄或摘要……&#10;&#10;例：&#10;P.021 — P.026 名單、總區突破……&#10;或直接貼 Gemini 的對話內容……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-imp-analyze" onclick="runImportAnalysis()">AI 分析整理 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT STEP 3：確認分析結果 ══ -->
+<div class="screen" id="screen-import-step3">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 03 / 04</div>
+    <div class="step-title">確認分析結果</div>
+    <div class="step-desc">AI 整理出以下內容，確認或微調後繼續。</div>
+  </div>
+  <div class="scroll-body" style="gap:16px">
+
+    <div class="section">
+      <div class="section-header">▸ 劇情摘要</div>
+      <textarea class="input-textarea" id="imp-result-summary" rows="5"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 已完成的主線</div>
+      <div id="imp-result-main-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn-add-field" style="margin-top:6px" onclick="addImpQuest('main')">＋ 新增主線記錄</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 已完成 / 進行中的支線</div>
+      <div id="imp-result-side-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn-add-field" style="margin-top:6px" onclick="addImpQuest('side')">＋ 新增支線記錄</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 角色狀態</div>
+      <div id="imp-result-chars" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 當前伏筆與懸念</div>
+      <textarea class="input-textarea" id="imp-result-hooks" rows="4"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 當前進度</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+          <div class="field-label">章節</div>
+          <input class="input-text" id="imp-chapter" type="number" min="1" value="1" style="padding:8px 12px">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+          <div class="field-label">頁碼</div>
+          <input class="input-text" id="imp-page" type="number" min="1" value="1" style="padding:8px 12px">
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 返回</button>
+    <button class="btn-primary" onclick="buildImportSummaryAndGoStep4()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT STEP 4：確認開始 ══ -->
+<div class="screen" id="screen-import-step4">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">4</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 04 / 04</div>
+    <div class="step-title">確認並繼續</div>
+    <div class="step-desc">匯入完成，確認後從當前進度繼續故事。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="summary-box" id="imp-summary-box"></div>
+    <div>
+      <div class="field-label">給 AI 的補充說明（選填）</div>
+      <div class="field-hint">有什麼特別要交代的，例如「下一步要去找副處長」。</div>
+      <textarea class="input-textarea" id="imp-extra-hint" rows="3" placeholder="例：下一幕從雷恩拿到名單之後繼續，海寧剛發現軍部 IP……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-imp-start" onclick="startImportedGame()">✦ 繼續故事</button>
+  </div>
+</div>
+
 </body>
 </html>
