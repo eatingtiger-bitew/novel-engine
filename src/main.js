@@ -71,4 +71,10 @@ async function init() {
   renderSettings();
 }
 
-init().catch(console.error);
+init()
+  .then(() => { console.log('[故事引擎] 初始化完成'); })
+  .catch(e => {
+    console.error('[故事引擎] 初始化失敗:', e);
+    // 也顯示在除錯面板
+    if (window.debugLog) window.debugLog('init() 失敗: ' + (e && e.message ? e.message : String(e)));
+  });
