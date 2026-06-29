@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>故事引擎</title>
+<link rel="stylesheet" href="./src/styles/base.css">
+<link rel="stylesheet" href="./src/styles/components.css">
+<link rel="stylesheet" href="./src/styles/game.css">
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="screen-home">
+  <div style="position:absolute;top:52px;right:18px;z-index:10"><button class="btn-theme" id="btn-theme" onclick="toggleTheme()" title="切換深色/亮色">🌙</button></div>
+  <div class="hero">
+    <div class="hero-eyebrow">Interactive Novel Engine</div>
+    <div class="hero-title">故事引擎</div>
+    <div class="hero-sub">選擇一個世界，繼續你的旅途</div>
+  </div>
+  <div class="home-list-label" id="home-list-label">▸ 進行中的遊戲</div>
+  <div class="game-list" id="game-list"></div>
+  <div class="home-actions">
+    <button class="btn-new-game" onclick="resetNewGame();goTo('screen-new-step1')">✦ 新遊戲</button>
+    <button class="btn-new-game" style="background:#1a2a1e;border-color:#44aa66;color:#a0ddb0;margin-top:0" onclick="goTo('screen-import-step1')">⬡ 匯入存檔</button>
+    <button class="btn-settings-link" onclick="goTo('screen-settings')">⚙ 設定 · API 金鑰</button>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="screen" id="screen-settings">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">設定</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="scroll-body">
+    <div class="section">
+      <div class="section-header">▸ API 金鑰</div>
+      <div>
+        <div class="field-label">GEMINI API KEY</div>
+        <div class="api-row">
+          <input class="api-input" id="gemini-key-input" type="password" placeholder="AIzaSy••••••••" oninput="onApiKeyChange()">
+          <div class="api-badge badge-none" id="gemini-key-badge">未設定</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">CLAUDE API KEY（備用）</div>
+        <div class="api-row">
+          <input class="api-input" id="claude-key-input" type="password" placeholder="sk-ant-••••••••" oninput="onApiKeyChange()">
+          <div class="api-badge badge-none" id="claude-key-badge">未設定</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">使用模型</div>
+        <div class="model-grid">
+          <button class="model-chip" data-model="gemini-2.5-flash-lite" onclick="selectModel(this)">3.1<br>Flash Lite</button>
+          <button class="model-chip active" data-model="gemini-2.5-flash" onclick="selectModel(this)">3.5<br>Flash</button>
+          <button class="model-chip" data-model="gemini-2.5-pro" onclick="selectModel(this)">3.1<br>Pro</button>
+          <button class="model-chip" data-model="claude" onclick="selectModel(this)">Claude<br>Sonnet</button>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">▸ 摘要 Prompt</div>
+      <div>
+        <div class="field-label">短摘要觸發間隔</div>
+        <div class="interval-row">
+          <input class="input-number" id="interval-short" type="number" min="3" max="50" value="10">
+          <span class="interval-unit">回合觸發一次</span>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">短摘要 Prompt</div>
+        <div class="prompt-block">
+          <div class="prompt-preview" id="prompt-short-preview"></div>
+          <div class="prompt-footer"><button class="btn-edit-prompt" onclick="editPrompt('short')">✎ 編輯</button></div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">深度歸檔觸發間隔</div>
+        <div class="interval-row">
+          <input class="input-number" id="interval-deep" type="number" min="10" max="100" value="20">
+          <span class="interval-unit">回合觸發一次</span>
+        </div>
+      </div>
+      <div>
+        <div class="field-label">深度歸檔 Prompt</div>
+        <div class="prompt-block">
+          <div class="prompt-preview" id="prompt-deep-preview"></div>
+          <div class="prompt-footer"><button class="btn-edit-prompt" onclick="editPrompt('deep')">✎ 編輯</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">▸ 存檔</div>
+      <button class="btn-danger" onclick="exportCapsule()">⬡ 匯出時空膠囊</button>
+      <button class="btn-danger" onclick="confirmClearAll()">⚠ 清除所有遊戲資料</button>
+    </div>
+    <div class="version-note">INTERACTIVE NOVEL ENGINE · v0.1</div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" onclick="saveSettings()">儲存設定</button>
+  </div>
+</div>
+
+<!-- ══ PROMPT EDITOR ══ -->
+<div class="screen" id="screen-prompt-editor">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title" id="prompt-editor-title">編輯 Prompt</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="scroll-body" style="gap:10px">
+    <div class="field-hint">此 Prompt 將在觸發時送給 AI 產出摘要。</div>
+    <textarea class="input-textarea" id="prompt-editor-ta" style="min-height:320px"></textarea>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">取消</button>
+    <button class="btn-primary" onclick="savePrompt()">儲存</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 1 ══ -->
+<div class="screen" id="screen-new-step1">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot current">1</div><div class="step-line"></div>
+    <div class="step-dot pending">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 01 / 05</div>
+    <div class="step-title">貼入世界觀設定</div>
+    <div class="step-desc">貼入現有模擬器 prompt 或自由描述，AI 會自動分析並預填後續設定。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">遊戲名稱</div>
+      <input class="input-text" id="new-game-name" placeholder="例：哨兵嚮導 · 帝國白塔篇" maxlength="40">
+    </div>
+    <div>
+      <div class="field-label">世界觀 / 設定文</div>
+      <div class="field-hint">可以貼現有 prompt 或自由描述，AI 將自動識別類型與所需欄位。</div>
+      <textarea class="input-textarea" id="new-game-worldview" rows="12" placeholder="貼入你的模擬器設定、角色卡、或世界觀說明……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" id="btn-analyze" onclick="runAnalysis()">自動分析 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 2 ══ -->
+<div class="screen" id="screen-new-step2">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 02 / 05</div>
+    <div class="step-title">確認分析結果</div>
+    <div class="step-desc">點 ✕ 刪除不需要的 tag，點 ＋ 自行新增。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="analyze-box">
+      <div class="analyze-group">
+        <div class="analyze-label">世界觀類型</div>
+        <div class="tag-row" id="tags-world"></div>
+      </div>
+      <div class="analyze-group">
+        <div class="analyze-label">建議開啟欄位</div>
+        <div class="tag-row" id="tags-fields"></div>
+      </div>
+      <div class="analyze-group">
+        <div class="analyze-label">偵測到的敘事風格</div>
+        <div class="analyze-text" id="detected-style">—</div>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">敘事風格補充（可自填）</div>
+      <div class="field-hint">這段文字會直接加入 AI 的 system prompt。</div>
+      <textarea class="input-textarea" id="style-supplement" rows="4" placeholder="例：輸出請帶科技感資訊框，選項風格幽默，角色不得使用霸總詞彙……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">重新分析</button>
+    <button class="btn-primary" onclick="goTo('screen-new-step3')">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 3 ══ -->
+<div class="screen" id="screen-new-step3">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">3</div><div class="step-line"></div>
+    <div class="step-dot pending">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 03 / 05</div>
+    <div class="step-title">貼入角色卡</div>
+    <div class="step-desc">貼入角色卡文字，AI 自動解析，解析完可手動微調。可以一次貼多個角色。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">角色卡原文</div>
+      <textarea class="input-textarea" id="charcard-input" rows="6" placeholder="姓名：雷恩·沃爾克&#10;職業：帝國首席哨兵 · S級&#10;精神體：白牙（銀白巨狼）&#10;…"></textarea>
+      <div style="margin-top:8px">
+        <button class="btn-ghost" id="btn-parse-char" style="width:100%;text-align:center" onclick="parseCharCards()">解析角色卡 →</button>
+      </div>
+    </div>
+    <div id="parsed-chars-area" style="display:none">
+      <div class="field-label">解析結果 · 可微調</div>
+      <div id="parsed-chars-list"></div>
+      <button class="btn-add-char" onclick="addBlankChar()">＋ 手動新增角色</button>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" onclick="goTo('screen-new-step4')">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 4 ══ -->
+<div class="screen" id="screen-new-step4">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">4</div><div class="step-line"></div>
+    <div class="step-dot pending">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 04 / 05</div>
+    <div class="step-title">模組與狀態欄位</div>
+    <div class="step-desc">開關功能模組，並設定自訂數值欄位的名稱與初始值。</div>
+  </div>
+  <div class="scroll-body" style="gap:6px">
+    <div class="field-label" style="margin-bottom:4px">模組開關</div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">支線任務系統</div><div class="toggle-sub">觸發提示、限時支線</div></div>
+      <button class="toggle-switch on" id="toggle-sidequest" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">戰鬥系統</div><div class="toggle-sub">遭遇戰、技能判定</div></div>
+      <button class="toggle-switch off" id="toggle-combat" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">好感度顯示</div><div class="toggle-sub">角色面板進度條</div></div>
+      <button class="toggle-switch on" id="toggle-affinity" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><div class="toggle-label">金錢系統</div><div class="toggle-sub">資產、交易紀錄</div></div>
+      <button class="toggle-switch off" id="toggle-money" onclick="toggleSwitch(this)"><div class="toggle-knob"></div></button>
+    </div>
+    <div class="field-label" style="margin-top:14px">自訂數值欄位</div>
+    <div class="field-hint">欄位名稱與初始值，最多 6 個。</div>
+    <div class="custom-fields" id="custom-fields-list"></div>
+    <button class="btn-add-field" onclick="addCustomField()">＋ 新增欄位</button>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" onclick="buildSummaryAndGoStep5()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ NEW GAME STEP 5 ══ -->
+<div class="screen" id="screen-new-step5">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">新遊戲</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">5</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 05 / 05</div>
+    <div class="step-title">確認並開始</div>
+    <div class="step-desc">設定總覽，確認無誤後開始第一幕。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="summary-box" id="summary-box"></div>
+    <div>
+      <div class="field-label">開場提示（選填）</div>
+      <div class="field-hint">告訴 AI 從哪裡開始，例如場景描述或特殊指示。</div>
+      <textarea class="input-textarea" id="opening-hint" rows="3" placeholder="例：從黎海寧第一次走進十三號疏導室開始……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-start-game" onclick="startGame()">✦ 開始遊戲</button>
+  </div>
+</div>
+
+<!-- ══ GAME MAIN ══ -->
+<div class="screen" id="screen-game">
+  <!-- top -->
+  <div class="game-top">
+    <div class="chapter-tag" id="game-chapter-tag">Ch.01 · p.001</div>
+    <div style="display:flex;gap:8px">
+    <button class="btn-theme" onclick="toggleTheme()">🌙</button>
+    <button class="btn-gear" onclick="goToHome()" title="回首頁">⌂</button>
+    <button class="btn-gear" onclick="goTo('screen-settings')" title="設定">⚙</button>
+  </div>
+  </div>
+  <!-- stat strip -->
+  <div class="stat-strip" id="game-stat-strip"></div>
+  <!-- sidequest banner (hidden by default) -->
+  <div class="sq-banner" id="sq-banner" style="display:none" onclick="showSqModal()">
+    <div style="font-size:14px">◈</div>
+    <div class="sq-text">
+      <div class="sq-label">▶ 支線任務觸發</div>
+      <div class="sq-title" id="sq-banner-title"></div>
+    </div>
+    <div class="sq-timer" id="sq-banner-timer"></div>
+  </div>
+  <!-- story -->
+  <div class="story-area" id="story-area">
+    <div id="story-content"></div>
+  </div>
+  <!-- choices -->
+  <div class="choices-area" id="choices-area">
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);text-align:center;padding:8px 0;">等待劇情生成…</div>
+  </div>
+  <!-- bottom nav -->
+  <div class="bottom-nav">
+    <button class="nav-tab active" id="tab-btn-story" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+    <button class="nav-tab" id="tab-btn-quest" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+    <button class="nav-tab" id="tab-btn-log" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+    <button class="nav-tab" id="tab-btn-char" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+  </div>
+
+  <!-- QUEST TAB -->
+  <div class="tab-page" id="tab-quest" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
+    <div class="tab-header">
+      <div class="tab-title">任務</div>
+      <div class="tab-sub" id="quest-sub">主線 1 條 · 支線 0 條</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+      <div class="sect-label">▸ 進行中</div>
+      <div class="quest-list" id="quest-active-list"></div>
+      <div class="tab-divider"></div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab active" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
+  </div>
+
+  <!-- LOG TAB -->
+  <div class="tab-page" id="tab-log" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
+    <div class="tab-header">
+      <div class="tab-title">日誌</div>
+      <div class="tab-sub" id="log-sub">歷史紀錄</div>
+    </div>
+    <div class="filter-row">
+      <input class="search-input" id="log-search" placeholder="搜尋事件或 tag…" oninput="renderLogList()">
+      <button class="filter-chip active" id="chip-all" onclick="setLogFilter('all')">全部</button>
+      <button class="filter-chip" id="chip-main" onclick="setLogFilter('main')">主線</button>
+      <button class="filter-chip" id="chip-side" onclick="setLogFilter('side')">支線</button>
+    </div>
+    <div class="log-list" id="log-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab active" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
+  </div>
+
+  <!-- CHAR TAB -->
+  <div class="tab-page" id="tab-char" style="display:none;position:absolute;left:0;right:0;top:0;bottom:0;background:var(--bg);overflow:hidden;flex-direction:column;">
+    <div class="tab-header">
+      <div class="tab-title">角色面板</div>
+      <div class="tab-sub" id="char-sub">已認識 0 人</div>
+    </div>
+    <div class="filter-row">
+      <input class="search-input" id="char-search" placeholder="搜尋角色…" oninput="renderCharList()">
+      <button class="filter-chip active" id="chip-char-all" onclick="setCharFilter('all')">全部</button>
+      <button class="filter-chip" id="chip-char-ally" onclick="setCharFilter('ally')">盟友</button>
+      <button class="filter-chip" id="chip-char-threat" onclick="setCharFilter('threat')">威脅</button>
+    </div>
+    <div class="char-list" id="char-list"></div>
+    <div class="bottom-nav">
+      <button class="nav-tab" onclick="switchTab('story')"><span class="nav-tab-icon">◈</span>劇情</button>
+      <button class="nav-tab" onclick="switchTab('quest')"><span class="nav-tab-icon">◇</span>任務</button>
+      <button class="nav-tab" onclick="switchTab('log')"><span class="nav-tab-icon">▣</span>日誌</button>
+      <button class="nav-tab active" onclick="switchTab('char')"><span class="nav-tab-icon">◉</span>角色</button>
+    </div>
+  </div>
+
+  <!-- SQ MODAL -->
+  <div class="modal-overlay" id="sq-modal" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-badge" id="sq-modal-badge">支線任務</div>
+      <div class="modal-title" id="sq-modal-title"></div>
+      <div class="modal-desc" id="sq-modal-desc"></div>
+      <div class="modal-timer-line" id="sq-modal-timer" style="display:none"></div>
+      <div class="modal-reward" id="sq-modal-reward" style="display:none">
+        <div class="modal-reward-label">✦ 預期獎勵</div>
+        <div class="modal-reward-item" id="sq-modal-reward-text"></div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-modal-primary" onclick="startSidequest()">進行支線（暫停主線）</button>
+        <button class="btn-modal-secondary" onclick="dismissSqModal()">稍後再說</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ QUEST RESULT ══ -->
+<div class="screen" id="screen-result">
+  <div class="top-bar" style="border:none;">
+    <div style="width:48px"></div>
+    <div class="top-bar-title">支線完成</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="result-area" id="result-area"></div>
+  <div class="bottom-bar">
+    <button class="btn-primary" onclick="returnToMain()">↩ 回到主線</button>
+  </div>
+</div>
+
+
+
+<!-- ══ IMPORT: STEP 1 上傳 txt ══ -->
+<div class="screen" id="screen-import-step1">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 取消</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot current">1</div><div class="step-line"></div>
+    <div class="step-dot pending">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 01 / 03</div>
+    <div class="step-title">上傳對話記錄</div>
+    <div class="step-desc">上傳 .txt 格式的對話記錄，AI 將自動提取世界觀、角色、主支線、伏筆等所有資訊。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div>
+      <div class="field-label">遊戲名稱</div>
+      <input class="input-text" id="imp-game-name" placeholder="例：哨兵嚮導 · 帝國白塔篇" maxlength="40">
+    </div>
+    <div>
+      <div class="field-label">對話記錄檔案（.txt）</div>
+      <div class="field-hint">請上傳包含完整對話記錄、世界觀、角色卡的 txt 文字檔。</div>
+      <div id="imp-drop-zone" style="border:2px dashed var(--border-md);border-radius:var(--r);padding:32px 18px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--bg-input);" onclick="document.getElementById('imp-file-input').click()">
+        <div style="font-size:28px;margin-bottom:8px">📄</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">點擊選擇 .txt 檔案</div>
+        <div id="imp-filename" style="font-family:var(--mono);font-size:10px;color:var(--accent-light);margin-top:8px"></div>
+      </div>
+      <input type="file" id="imp-file-input" accept=".txt" style="display:none" onchange="onImpFileSelect(this)">
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-primary" id="btn-imp-upload" onclick="runImpFileAnalysis()">AI 分析 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT: STEP 2 確認 + 補填 ══ -->
+<div class="screen" id="screen-import-step2">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">2</div><div class="step-line"></div>
+    <div class="step-dot pending">3</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 02 / 03</div>
+    <div class="step-title">確認分析結果</div>
+    <div class="step-desc">AI 提取的內容如下，可直接編輯。⚠️ 標示的欄位表示資料不足，請補填。</div>
+  </div>
+  <div class="scroll-body" style="gap:16px">
+
+    <div class="section">
+      <div class="section-header">▸ 世界觀設定</div>
+      <div id="imp-world-warn" style="display:none;font-family:var(--mono);font-size:10px;color:var(--amber);margin-bottom:6px">⚠ 未偵測到完整世界觀，請補充</div>
+      <textarea class="input-textarea" id="imp-result-world" rows="4" placeholder="世界觀設定……"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 敘事風格規範</div>
+      <div id="imp-style-warn" style="display:none;font-family:var(--mono);font-size:10px;color:var(--amber);margin-bottom:6px">⚠ 未偵測到敘事規範</div>
+      <textarea class="input-textarea" id="imp-result-style" rows="3" placeholder="敘事風格……"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 角色卡</div>
+      <div id="imp-chars-warn" style="display:none;font-family:var(--mono);font-size:10px;color:var(--amber);margin-bottom:6px">⚠ 未偵測到角色資料</div>
+      <div id="imp-result-chars-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn-add-field" style="margin-top:8px" onclick="addImpChar()">＋ 新增角色</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 已完成主線</div>
+      <div id="imp-result-main-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn-add-field" style="margin-top:6px" onclick="addImpQuest('main')">＋ 新增主線</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 支線（已完成 / 進行中）</div>
+      <div id="imp-result-side-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button class="btn-add-field" style="margin-top:6px" onclick="addImpQuest('side')">＋ 新增支線</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 當前伏筆與懸念</div>
+      <div id="imp-hooks-warn" style="display:none;font-family:var(--mono);font-size:10px;color:var(--amber);margin-bottom:6px">⚠ 未偵測到伏筆</div>
+      <textarea class="input-textarea" id="imp-result-hooks" rows="3" placeholder="當前伏筆……"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-header">▸ 當前進度</div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1"><div class="field-label">章節</div>
+          <input class="input-text" id="imp-chapter" type="number" min="1" value="1" style="padding:8px 12px"></div>
+        <div style="flex:1"><div class="field-label">頁碼</div>
+          <input class="input-text" id="imp-page" type="number" min="1" value="1" style="padding:8px 12px"></div>
+      </div>
+    </div>
+
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" onclick="buildImpConfirmAndGoStep3()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ IMPORT: STEP 3 確認開始 ══ -->
+<div class="screen" id="screen-import-step3">
+  <div class="top-bar">
+    <button class="btn-back" onclick="goBack()">← 返回</button>
+    <div class="top-bar-title">匯入存檔</div>
+    <div style="width:48px"></div>
+  </div>
+  <div class="step-bar">
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot done">✓</div><div class="step-line done"></div>
+    <div class="step-dot current">3</div>
+  </div>
+  <div class="step-head">
+    <div class="step-num">STEP 03 / 03</div>
+    <div class="step-title">確認並繼續</div>
+    <div class="step-desc">確認後從當前進度繼續故事。</div>
+  </div>
+  <div class="scroll-body" style="gap:14px">
+    <div class="summary-box" id="imp-summary-box"></div>
+    <div>
+      <div class="field-label">補充說明給 AI（選填）</div>
+      <div class="field-hint">例如「下一幕從發現名單後繼續」</div>
+      <textarea class="input-textarea" id="imp-extra-hint" rows="3" placeholder="補充說明……"></textarea>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-ghost" onclick="goBack()">← 上一步</button>
+    <button class="btn-primary" id="btn-imp-start" onclick="startImportedGame()">✦ 繼續故事</button>
+  </div>
+</div>
+
+<!-- ══ STATS PANEL OVERLAY ══ -->
+<div class="stats-overlay" id="stats-overlay" style="display:none" onclick="closeStatsPanel(event)">
+  <div class="stats-sheet" onclick="event.stopPropagation()">
+    <div class="stats-sheet-handle"></div>
+    <div class="stats-sheet-title">
+      全部狀態
+      <button class="stats-sheet-close" onclick="closeStatsPanel()">✕</button>
+    </div>
+    <div id="stats-panel-content"></div>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
