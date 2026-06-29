@@ -39,8 +39,6 @@ export async function runImpFileAnalysis() {
       + '{"world":"世界觀300字","style":"敘事風格100字","characters":[{"name":"姓名","role":"職業","relation":"關係","affinity":50,"notes":"特徵"}],'
       + '"mainQuests":[{"title":"主線","status":"completed","desc":"一句話"}],"sideQuests":[{"title":"支線","status":"active","desc":"一句話"}],'
       + '"hooks":"伏筆150字","chapter":1,"page":1}\n\n對話記錄:\n' + truncated;
-
-' + truncated;
     const raw = await callGeminiSafe(prompt);
     const rc = raw.replace(/```json[\s\S]*?```|```/g, '').trim();
     const js = rc.indexOf('{'); const je = rc.lastIndexOf('}');
