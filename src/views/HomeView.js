@@ -1,7 +1,7 @@
-import { S, activeGame, persist } from '../state/store.js';
+import { S, activeGame, persist, resetNewGame } from '../state/store.js';
 import { esc } from '../utils/escape.js';
 import { toast } from '../utils/toast.js';
-import { goTo, resetNewGame } from '../router/index.js';
+import { goTo } from '../router/index.js';
 
 export function renderHome() {
   const list = document.getElementById('game-list');
