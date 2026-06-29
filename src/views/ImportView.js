@@ -38,9 +38,8 @@ export async function runImpFileAnalysis() {
     const prompt = '你是互動小說存檔分析器。請從以下對話記錄中提取所有資訊，輸出純JSON（從{開始）:\n'
       + '{"world":"世界觀300字","style":"敘事風格100字","characters":[{"name":"姓名","role":"職業","relation":"關係","affinity":50,"notes":"特徵"}],'
       + '"mainQuests":[{"title":"主線","status":"completed","desc":"一句話"}],"sideQuests":[{"title":"支線","status":"active","desc":"一句話"}],'
-      + '"hooks":"伏筆150字","chapter":1,"page":1}'
+      + '"hooks":"伏筆150字","chapter":1,"page":1}\n\n對話記錄:\n' + truncated;
 
-對話記錄:
 ' + truncated;
     const raw = await callGeminiSafe(prompt);
     const rc = raw.replace(/```json[\s\S]*?```|```/g, '').trim();
