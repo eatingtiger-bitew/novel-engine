@@ -62,6 +62,8 @@ export async function startSidequest() {
 }
 
 export function returnToMain() {
-  const { renderGameScreen } = window._views || {};
+  const g = (window._store && window._store.activeGame) ? window._store.activeGame() : null;
+  if (g) g.mode = 'main';
+  const renderGameScreen = window._views && window._views.renderGameScreen;
   if (renderGameScreen) renderGameScreen();
 }

@@ -7,6 +7,81 @@
 <link rel="stylesheet" href="./src/styles/base.css">
 <link rel="stylesheet" href="./src/styles/components.css">
 <link rel="stylesheet" href="./src/styles/game.css">
+
+<!-- 全域錯誤攔截器（非 module，最先執行） -->
+<script>
+(function(){
+  var errors = [];
+  var _panel, _list;
+
+  function getPanel(){
+    if(!_panel){
+      _panel = document.getElementById('debug-overlay');
+      _list  = document.getElementById('debug-error-list');
+    }
+    return _panel;
+  }
+
+  function showError(msg, src, line){
+    var entry = '[' + new Date().toLocaleTimeString() + '] ' + msg
+      + (src ? '\n  @ ' + src.replace(location.origin,'') + (line ? ':'+line : '') : '');
+    errors.push(entry);
+    var p = getPanel();
+    if(p){
+      p.style.display = 'flex';
+      _list.textContent = errors.slice(-8).join('\n\n');
+    }
+    // 同時存到 window 供複製
+    window._debugErrors = errors;
+  }
+
+  // 1. 一般 JS 錯誤
+  window.addEventListener('error', function(e){
+    showError((e.message||'Unknown error'), e.filename, e.lineno);
+  });
+
+  // 2. Promise / module import 失敗
+  window.addEventListener('unhandledrejection', function(e){
+    var msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+    var stack = e.reason && e.reason.stack ? e.reason.stack : '';
+    showError('Promise rejection: ' + msg + (stack ? '\n' + stack.split('\n').slice(0,3).join('\n') : ''));
+  });
+
+  // 3. 主動 log（供各模組呼叫）
+  window.debugLog = function(msg){
+    showError('[LOG] ' + msg);
+  };
+
+  // 4. console.error 轉發
+  var _origError = console.error.bind(console);
+  console.error = function(){
+    _origError.apply(console, arguments);
+    showError('[console.error] ' + Array.from(arguments).map(String).join(' '));
+  };
+})();
+</script>
+
+<!-- 除錯面板 HTML（固定在畫面底部） -->
+<div id="debug-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1a0e0e;border-top:2px solid #cc4455;flex-direction:column;max-height:50vh;">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#220e0e;flex-shrink:0">
+    <span style="font-family:monospace;font-size:12px;color:#f0aaa0;font-weight:bold">⚠ 發現錯誤</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="navigator.clipboard.writeText(window._debugErrors.join('\n\n')).then(()=>alert('已複製！')).catch(()=>alert(window._debugErrors.join('\n\n')))"
+        style="font-size:11px;padding:4px 10px;background:#3a1515;border:1px solid #664444;border-radius:6px;color:#f0aaa0;cursor:pointer;font-family:monospace">
+        複製錯誤
+      </button>
+      <button onclick="document.getElementById('debug-overlay').style.display='none'"
+        style="font-size:11px;padding:4px 10px;background:#2a1515;border:1px solid #553333;border-radius:6px;color:#884444;cursor:pointer;font-family:monospace">
+        收起
+      </button>
+    </div>
+  </div>
+  <pre id="debug-error-list" style="margin:0;padding:12px 14px;font-family:monospace;font-size:11px;color:#f0c8c8;line-height:1.65;overflow-y:auto;flex:1;white-space:pre-wrap;word-break:break-all"></pre>
+  <div style="padding:6px 14px;background:#1a0e0e;font-family:monospace;font-size:10px;color:#664444;flex-shrink:0">
+    提示：複製上方錯誤後貼給 Claude 就能修
+  </div>
+</div>
+
 </head>
 <body>
 
