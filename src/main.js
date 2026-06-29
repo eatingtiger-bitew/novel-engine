@@ -7,15 +7,26 @@ import { toast } from './utils/toast.js';
 import { esc } from './utils/escape.js';
 
 import { renderHome, deleteGame } from './views/HomeView.js';
-import { renderSettings, onApiKeyChange, selectModel, editPrompt, savePrompt, saveSettings, exportCapsule, confirmClearAll } from './views/SettingsView.js';
-import { runAnalysis, renderStep2, renderTags, removeTag, parseCharCards, renderParsedChars, removeChar, addBlankChar, toggleSwitch, addCustomField, renderCustomFields, delCustomField, buildSummaryAndGoStep5, startGame } from './views/NewGameView.js';
+import {
+  renderSettings, onApiKeyChange, selectModel,
+  editPrompt, savePrompt, saveSettings, exportCapsule, confirmClearAll
+} from './views/SettingsView.js';
+import {
+  runAnalysis, removeTag, parseCharCards, renderParsedChars,
+  removeChar, addBlankChar, toggleSwitch, addCustomField,
+  renderCustomFields, delCustomField, buildSummaryAndGoStep5, startGame
+} from './views/NewGameView.js';
 import { renderGameScreen, switchTab } from './views/GameView.js';
 import { renderQuestTab } from './views/QuestView.js';
 import { renderLogList, setLogFilter } from './views/LogView.js';
 import { renderCharList, setCharFilter } from './views/CharView.js';
 import { openStatsPanel, closeStatsPanel } from './components/StatsPanel.js';
-import { showSqModal, dismissSqModal, startSidequest } from './components/SqBanner.js';
-import { onImpFileSelect, runImpFileAnalysis, renderImpCharsList, addImpChar, renderImpQuestList, addImpQuest, delImpQuest, buildImpConfirmAndGoStep3, startImportedGame, IMP } from './views/ImportView.js';
+import { showSqModal, dismissSqModal, startSidequest, returnToMain } from './components/SqBanner.js';
+import {
+  onImpFileSelect, runImpFileAnalysis, renderImpCharsList,
+  addImpChar, renderImpQuestList, addImpQuest, delImpQuest,
+  buildImpConfirmAndGoStep3, startImportedGame, IMP
+} from './views/ImportView.js';
 import { generateStory } from './engine/gameEngine.js';
 
 // ── 把 view render 函數注入 router ──
@@ -24,41 +35,76 @@ window._views = {
   renderParsedChars, renderQuestTab, renderLogList, renderCharList
 };
 
-// ── 把常用物件掛到 window 供 HTML oninput/onclick 使用 ──
+// ── 把 store 物件掛到 window 供 HTML oninput 使用 ──
 window.S = S;
 window._IMP = IMP;
 window._store = { activeGame, persist };
-window._toast = toast;
 
 // ── 全域函數（HTML onclick 需要） ──
+// 注意：resetNewGame 和 toast 都需要掛上去
 Object.assign(window, {
+  // utils
+  toast,
+  esc,
   // router
-  goTo, goBack, goToHome,
+  goTo,
+  goBack,
+  goToHome,
   // theme
   toggleTheme,
   // home
-  renderHome, deleteGame,
+  renderHome,
+  deleteGame,
   // settings
-  renderSettings, onApiKeyChange, selectModel, editPrompt, savePrompt, saveSettings, exportCapsule, confirmClearAll,
+  renderSettings,
+  onApiKeyChange,
+  selectModel,
+  editPrompt,
+  savePrompt,
+  saveSettings,
+  exportCapsule,
+  confirmClearAll,
   // new game wizard
-  runAnalysis, removeTag, parseCharCards, removeChar, addBlankChar,
-  toggleSwitch, addCustomField, delCustomField, buildSummaryAndGoStep5, startGame,
+  resetNewGame,
+  runAnalysis,
+  removeTag,
+  parseCharCards,
+  removeChar,
+  addBlankChar,
+  toggleSwitch,
+  addCustomField,
+  renderCustomFields,
+  delCustomField,
+  buildSummaryAndGoStep5,
+  startGame,
   // game
-  switchTab, generateStory,
-  // quest/log/char
-  setLogFilter, setCharFilter,
+  switchTab,
+  generateStory,
+  // tabs
+  setLogFilter,
+  setCharFilter,
   // stats panel
-  openStatsPanel, closeStatsPanel,
+  openStatsPanel,
+  closeStatsPanel,
   // sidequest
-  showSqModal, dismissSqModal, startSidequest,
+  showSqModal,
+  dismissSqModal,
+  startSidequest,
+  returnToMain,
   // import
-  onImpFileSelect, runImpFileAnalysis, addImpChar, addImpQuest, delImpQuest, buildImpConfirmAndGoStep3, startImportedGame,
-  // helpers exposed to html template strings in views
+  onImpFileSelect,
+  runImpFileAnalysis,
+  addImpChar,
+  addImpQuest,
+  delImpQuest,
+  buildImpConfirmAndGoStep3,
+  startImportedGame,
+  // helpers for dynamic HTML onclick
   _removeTag: removeTag,
   _removeChar: removeChar,
   _delCustomField: delCustomField,
   _deleteGame: deleteGame,
-  _impRemoveChar: (i) => { IMP.characters.splice(i,1); renderImpCharsList(); },
+  _impRemoveChar: (i) => { IMP.characters.splice(i, 1); renderImpCharsList(); },
   _delImpQuest: delImpQuest,
 });
 
@@ -75,6 +121,5 @@ init()
   .then(() => { console.log('[故事引擎] 初始化完成'); })
   .catch(e => {
     console.error('[故事引擎] 初始化失敗:', e);
-    // 也顯示在除錯面板
     if (window.debugLog) window.debugLog('init() 失敗: ' + (e && e.message ? e.message : String(e)));
   });
