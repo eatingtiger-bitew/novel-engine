@@ -8,19 +8,28 @@ export async function runAnalysis() {
   const name = document.getElementById('new-game-name').value.trim();
   const wv = document.getElementById('new-game-worldview').value.trim();
   if (!name) { toast('請先填入遊戲名稱'); return; }
-  if (wv.length < 20) { toast('世界觀描述太短，請補充內容'); return; }
+  if (wv.length < 20) { toast('內容太短，請補充內容'); return; }
   if (!S.settings.geminiKey) { toast('請先在設定頁填入 Gemini API Key'); return; }
 
   const btn = document.getElementById('btn-analyze');
   btn.innerHTML = '<span class="spinner"></span>分析中…'; btn.disabled = true;
-  S.newGame.name = name; S.newGame.worldview = wv;
+  S.newGame.name = name;
 
   try {
     const res = await callGemini(
-      `你是互動小說引擎的設定分析器。請分析以下內容，以純 JSON 輸出（從{開始，不要任何說明或markdown）：
-{"worldTags":["標籤"],"fieldTags":["欄位"],"style":"敘事風格一句話","characters":[{"name":"姓名","role":"職業","relation":"NPC對玩家主角的關係","affinity":50,"notes":"特徵一句"}]}
-worldTags：3-5個世界觀標籤。fieldTags：3-6個建議數值欄位。style：敘事風格。characters：如果內容中有角色卡資料請提取，沒有則給空陣列[]。
-世界觀/設定文：
+      `你是互動小說引擎的設定分析器。使用者貼入的內容可能是「單純世界觀描述」，也可能是「完整的模擬器系統 prompt」（包含背景設定、互動機制、敘事規範、角色卡等）。
+請判斷內容類型，並將其拆解填入以下純 JSON 格式（從{開始，不要任何說明或markdown）：
+{"worldview":"提煉後的世界觀與核心機制描述，200字內","worldTags":["標籤"],"fieldTags":["欄位"],"style":"敘事風格一句話","styleSupp":"詳細的敘事/輸出規範補充，若原文有列點規則請完整保留條列內容","characters":[{"name":"姓名","role":"職業","relation":"NPC對玩家主角的關係","affinity":50,"notes":"特徵一句"}]}
+
+說明：
+- worldview：濃縮背景設定、好感度機制、路線規則等「故事世界如何運作」的部分。
+- worldTags：3-5個世界觀標籤。
+- fieldTags：3-6個建議數值欄位。
+- style：敘事風格一句話總結。
+- styleSupp：原文中關於文字風格、句式禁忌、輸出格式、字數要求、標點規範等「怎麼寫」的詳細規則，盡量完整保留，不要省略。
+- characters：如果內容中有具體角色卡資料請提取，沒有則給空陣列[]。
+
+使用者貼入內容：
 ${wv}`
     );
     let p;
@@ -31,9 +40,11 @@ ${wv}`
       p = JSON.parse(rc.slice(js, je + 1));
     } catch { throw new Error('AI 回傳格式錯誤，請再試一次'); }
 
+    S.newGame.worldview = p.worldview || wv;
     S.newGame.worldTags = p.worldTags || [];
     S.newGame.fieldTags = p.fieldTags || [];
     S.newGame.detectedStyle = p.style || '';
+    S.newGame.styleSupp = p.styleSupp || '';
     if (p.characters && p.characters.length > 0) S.newGame.characters = p.characters;
     renderStep2();
     S.newGame.customFields = S.newGame.fieldTags.map(f => ({ name: f, value: '100' }));
