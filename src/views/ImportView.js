@@ -104,7 +104,7 @@ export function renderImpQuestList(cid, quests) {
     row.innerHTML = '<div style="font-family:var(--mono);font-size:9px;width:40px;flex-shrink:0;color:' + (q.status==='active'?'var(--green)':'var(--text-muted)') + '">'
       + (q.status==='active'?'▶ 進行':'✓ 完成') + '</div>'
       + '<input class="input-text" style="flex:1;padding:7px 10px;font-size:11px" value="' + esc(q.title) + '" oninput="window._IMP.' + (isMain?'mainQuests':'sideQuests') + '[' + i + '].title=this.value">'
-      + '<button class="btn-del-field" onclick="window._delImpQuest('' + cid + '',' + i + ')">x</button>';
+      + '<button class="btn-del-field" onclick="window._delImpQuest(\'' + cid + '\',' + i + ')">x</button>';
     c.appendChild(row);
   });
 }
@@ -166,10 +166,7 @@ export async function startImportedGame() {
       modules:{sidequest:true, combat:false, affinity:true, money:false},
       customFields:[], openingHint:extraHint,
       createdAt:Date.now(), page:IMP.page, chapter:IMP.chapter,
-      summaries:[IMP.world+(IMP.hooks?'
-
-伏筆:
-'+IMP.hooks:'')],
+      summaries:[IMP.world+(IMP.hooks?'\n\n伏筆:\n'+IMP.hooks:'')],
       history:[], logs, quests, snapshot, turnCount:0, mode:'main', savedMainState:null
     };
     S.games.push(g); S.activeGameId = id; await persist();
@@ -177,13 +174,8 @@ export async function startImportedGame() {
     S.screenStack = ['screen-home'];
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     goTo('screen-game');
-    const openMsg = '匯入存檔，從當前進度繼續
-
-世界觀:' + g.summaries[0].slice(0,300) + '
-
-' + (extraHint?'補充:'+extraHint+'
-
-':'') + '請從 Ch.'+g.chapter+' p.'+g.page+' 繼續故事。';
+    const openMsg = '匯入存檔，從當前進度繼續\n\n世界觀:' + g.summaries[0].slice(0,300)
+      + '\n\n' + (extraHint?'補充:'+extraHint+'\n\n':'') + '請從 Ch.'+g.chapter+' p.'+g.page+' 繼續故事。';
     await generateStory(g, openMsg);
   } catch(e) { toast('匯入失敗:'+(e.message||'未知錯誤')); }
   finally { btn.innerHTML = '繼續故事'; btn.disabled = false; }
